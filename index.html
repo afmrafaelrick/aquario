@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#003f5c">
+<meta charset="UTF-8">
+<title>Aquário – Manutenção</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+
+body {
+  background:#002b3d;
+  color:white;
+  font-family:Arial, sans-serif;
+  padding:0px;
+  margin: 0;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+h2 {
+  margin-bottom:10px;
+}
+
+button {
+  background: linear-gradient(145deg, #1fa2d6, #137aa6);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+}
+
+button.secundario {
+  background: linear-gradient(145deg, #5f6f7a, #3e4c55);
+  font-weight: normal;
+}
+
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 rgba(241,196,15,0.0); }
+  50%  { box-shadow: 0 0 12px rgba(241,196,15,0.6); }
+  100% { box-shadow: 0 0 0 rgba(241,196,15,0.0); }
+}
+
+.card.alerta {
+  animation: pulse 2.5s infinite;
+}
+
+@keyframes pulseRed {
+  0%   { box-shadow: 0 0 0 rgba(255,107,107,0.0); }
+  50%  { box-shadow: 0 0 14px rgba(255,107,107,0.6); }
+  100% { box-shadow: 0 0 0 rgba(255,107,107,0.0); }
+}
+
+.hidden {
+  display: none;
+}
+
+.card.critico {
+  animation: pulseRed 2s infinite;
+}
+
+
+.card {
+  background: linear-gradient(145deg, #014f6e, #00384f);
+  border-radius: 18px;
+  padding: 18px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.35s ease both;
+  position: relative; /* permite sobreposição */
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;1
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.45);
+}
+
+/* Cores de status */
+.card.ok       { border-left: 6px solid #3bd671; }
+.card.alerta   { border-left: 6px solid #f1c40f; }
+.card.critico  { border-left: 6px solid #ff6b6b; }
+.card.neutro   { border-left: 6px solid #7f8c8d; }
+
+
+
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-status {
+
+  top: 8px;
+  right: 10px;
+  font-size: 28px;
+  opacity: 0.9;
+}
+
+
+.card-icon {
+  font-size: 48px;
+  max-width: 100%;
+  line-height: 1;
+}
+
+.card-title {
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1.2;
+  word-break: break-word;
+  flex: 1;              /* ← ocupa o espaço disponível */
+}
+
+
+.card-body {
+  font-size: 28px;
+  opacity: 0.95;
+}
+
+.card-body .ideal {
+  margin-top: 4px;
+  font-size: 26px;
+  opacity: 0.85;
+}
+
+
+.card-days {
+  font-size: 52px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.card-days span {
+  font-size: 26px;
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+.card-ideal {
+  margin-top: 4px;
+  font-size: 24px;
+  opacity: 0.75;
+}
+
+
+
+.modal > div {
+  background:#003b5c;
+  padding:15px;
+  margin:60px auto;
+  width:320px;
+  border-radius:10px;
+}
+
+input, textarea {
+  width:100%;
+  margin-bottom:8px;
+}
+
+.modal {
+  display: none;              /* ← ESSENCIAL */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+
+
+.modal-content {
+  background: #003b5c;
+  width: 90%;
+  max-width: 420px;
+  max-height: 85vh;
+  padding: 15px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.config-scroll {
+  overflow-y: auto;
+  flex: 1;
+  margin: 10px 0;
+  padding-right: 6px;
+}
+
+
+.modal-botoes {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 8px;
+  overflow-x: hidden;
+  margin-top: 15px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.app-title {
+  font-size: 44px;
+  font-weight: bold;
+}
+
+.config-btn {
+  background: linear-gradient(145deg, #137aa6, #0b4f6c);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border: none;
+  color: white;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 32px;
+  margin-top: 10px;
+}
+
+
+
+
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 26px;
+}
+
+.config-item label {
+  color: #cfefff;
+  margin-bottom: 4px;
+}
+
+.config-item input {
+  height: 32px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: none;
+  font-size: 26px;
+}
+
+
+.hist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+.btn-delete:hover {
+  opacity: 1;
+}
+
+.btn.danger {
+  background: #c0392b;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.btn.cancel {
+  background: #7f8c8d;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.config-backup {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.btn-backup {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  background: #0a7aa8;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="app-title">🐠 Aquário</div>
+  <button class="config-btn" onclick="abrirConfig()">⚙️</button>
+</div>
+
+
+<button onclick="abrirConfig()">⚙️ Configurações</button>
+
+<div id="cards"></div>
+
+<!-- MODAL MEDIÇÃO -->
+<div id="modal" class="modal">
+  <div>
+    <h3 id="titulo"></h3>
+    <input type="date" id="data">
+    <input type="number" step="any" id="valor" placeholder="Valor">
+    <textarea id="obs" placeholder="Observações"></textarea>
+    <button onclick="salvar()">Salvar</button>
+    <button onclick="abrirHistorico()">📜 Histórico</button>
+    <button class="secundario" onclick="fechar()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL HISTÓRICO -->
+<div id="historicoModal" class="modal">
+  <div>
+    <h3 id="histTitulo"></h3>
+    <div id="listaHistorico"></div>
+    <div id="grafico-container" style="margin-top:20px;">
+      <canvas id="grafico" style="height:220px; width:100%;"></canvas>
+    </div>
+    <button onclick="fecharHistorico()">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div id="configModal" class="modal">
+  <div class="modal-content">
+    <h3>⚙️ Configurações</h3>
+
+    <div class="config-scroll">
+      <div id="configCampos" class="config-grid"></div>
+    </div>
+<div class="config-backup">
+  <button class="btn-backup" onclick="exportarDados()">📤 Exportar Backup</button>
+
+  <input type="file" id="importFile" accept=".json" hidden onchange="importarDados(event)">
+
+  <button class="btn-backup" onclick="document.getElementById('importFile').click()">
+    📥 Importar Backup
+  </button>
+</div>
+
+    <div class="modal-botoes">
+      <button onclick="salvarConfig()">Salvar</button>
+      <button class="secundario" onclick="fecharConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal">
+  <div class="modal-box">
+    <h3>Excluir registro?</h3>
+    <p>Esta ação não poderá ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn cancel" onclick="fecharConfirm()">Cancelar</button>
+      <button class="btn danger" onclick="confirmarExclusao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+
+<script>
+// ------------------- ITENS -------------------
+const itens = [
+  "TPA","Densidade","KH","Fosfato","pH",
+  "Nitrito","Amônia","Perlon","Phosgard","Aquapure",
+  "Fuel","Carbonate","BioActive","Stability"
+];
+
+const icones = {
+  TPA: "💧",
+  Densidade: "⚖️",
+  KH: "🧪",
+  Fosfato: "🧫",
+  pH: "🌊",
+  Nitrito: "☠️",
+  Amônia: "☢️",
+  Perlon: "🧻",
+  Phosgard: "🧱",
+  Aquapure: "🔵",
+  Fuel: "🔥",
+  Carbonate: "🪨",
+  BioActive: "🦠",
+  Stability: "⚓"
+};
+
+const statusIcone = {
+  ok: "✔️",
+  alerta: "⚠️",
+  critico: "❗",
+  neutro: "➖"
+};
+
+
+// ------------------- CONFIG -------------------
+const configPadrao = {
+  TPA:{dias:10, ideal:null},
+  Densidade:{dias:7, ideal:1.025},
+  KH:{dias:3, ideal:8},
+  Fosfato:{dias:7, ideal:0.03},
+  pH:{dias:3, ideal:8.2},
+  Nitrito:{dias:7, ideal:0},
+  Amônia:{dias:7, ideal:0},
+  Perlon:{dias:15, ideal:null},
+  Phosgard:{dias:30, ideal:null},
+  Aquapure:{dias:30, ideal:null},
+  Fuel:{dias:null, ideal:null},
+  Carbonate:{dias:null, ideal:null},
+  BioActive:{dias:null, ideal:null},
+  Stability:{dias:null, ideal:null}
+};
+
+function carregarConfig(){
+  let cfgSalvo = JSON.parse(localStorage.getItem("config")) || {};
+  let cfgFinal = {};
+
+  itens.forEach(nome => {
+    cfgFinal[nome] = {
+      dias: cfgSalvo[nome]?.dias ?? configPadrao[nome].dias,
+      ideal: cfgSalvo[nome]?.ideal ?? configPadrao[nome].ideal
+    };
+  });
+
+  localStorage.setItem("config", JSON.stringify(cfgFinal));
+  return cfgFinal;
+}
+
+
+// ------------------- UTIL -------------------
+function diasDesde(dataStr){
+  if(!dataStr) return "Nunca";
+  const hoje = new Date();
+  const data = new Date(dataStr);
+  const diff = hoje - data;
+  const dias = Math.floor(diff / (1000*60*60*24));
+  if(dias===0) return "Hoje";
+  if(dias===1) return "1 dia";
+  return dias+" dias";
+}
+
+function classeAlerta(diasStr, limite){
+  // Sem intervalo definido → sempre neutro
+  if (limite === null || isNaN(limite)) return "neutro";
+
+  if(diasStr==="Nunca") return "neutro";
+  if(diasStr==="Hoje") return "ok";
+
+  const dias = parseInt(diasStr);
+  if(isNaN(dias)) return "neutro";
+
+  if(dias < limite*0.8) return "ok";
+  if(dias <= limite) return "alerta";
+  return "critico";
+}
+
+
+// ------------------- TELA PRINCIPAL -------------------
+function carregar(){
+  const cards = document.getElementById("cards");
+  const cfg = carregarConfig();
+  cards.innerHTML = "";
+
+  itens.forEach(nome=>{
+    const hist = JSON.parse(localStorage.getItem(nome)||"[]");
+    const temHistorico = hist.length > 0;
+    const ultimaData = obterUltimaData(hist);
+    const diasStr = diasDesde(ultimaData);
+    const limite = cfg[nome].dias;
+    const classe = classeAlerta(diasStr, limite);
+
+    const div = document.createElement("div");
+    div.className = "card "+classe;
+    div.innerHTML = `
+      <div class="card-header">
+        <div class="card-icon">${icones[nome] || "🐠"}</div>
+        <div class="card-title">${nome}</div>
+      </div>
+
+      <div class="card-days">
+        ${
+          !temHistorico
+            ? "—<span>sem dados</span>"
+            : diasStr === "Hoje"
+              ? "Hoje"
+              : diasStr === "1 dia"
+                ? "1<span>dia</span>"
+                : `${diasStr.replace(" dias","")}<span> dias</span>`
+        }
+      </div>
+
+
+      <div class="card-ideal">
+        ${limite ? `Ideal: ${limite} dias` : "Sem intervalo"}
+      </div>
+      <div class="card-status">${statusIcone[classe]}</div>
+
+    `;
+    div.onclick = ()=>abrir(nome);
+    cards.appendChild(div);
+  });
+}
+
+// ------------------- MEDIÇÕES -------------------
+let atual = null;
+let indiceEdicao = null;
+let excluirItem = null;
+let excluirId = null;
+
+
+function abrir(nome){
+  if (!nome) return;
+  fecharTodosModais();   // ← ADICIONAR
+  atual = nome;
+  indiceEdicao = null;
+  document.getElementById("titulo").innerText = nome;
+  const hoje = new Date().toISOString().split("T")[0];
+  document.getElementById("data").value = hoje;
+  document.getElementById("valor").value = "";
+  document.getElementById("obs").value = "";
+  document.getElementById("modal").style.display = "flex";
+}
+
+
+function fechar(){
+  document.getElementById("modal").style.display="none";
+}
+
+function salvar() {
+  let hist = JSON.parse(localStorage.getItem(atual) || "[]");
+
+  const novo = {
+    id: indiceEdicao || crypto.randomUUID(),
+    data: document.getElementById("data").value,
+    valor: document.getElementById("valor").value,
+    obs: document.getElementById("obs").value
+  };
+
+  if (indiceEdicao) {
+    hist = hist.map(r => r.id === indiceEdicao ? novo : r);
+    indiceEdicao = null;
+  } else {
+    hist.push(novo);
+  }
+
+  localStorage.setItem(atual, JSON.stringify(hist));
+  normalizarHistorico(atual);
+
+  fechar();
+  carregar();
+}
+
+// ------------------- HISTÓRICO -------------------
+function abrirHistorico() {
+  if (!atual) return;
+
+  fecharTodosModais();
+
+  document.getElementById("histTitulo").innerText = atual;
+  const lista = document.getElementById("listaHistorico");
+  lista.innerHTML = "";
+
+  // 🔑 SEMPRE normaliza antes
+  const hist = normalizarHistorico(atual).slice().reverse();
+
+  hist.forEach(item => {
+    lista.innerHTML += `
+      <div class="hist-item">
+        <div>
+          <strong>${item.data}</strong> — ${item.valor}<br>
+          ${item.obs || ""}
+        </div>
+        <div>
+          <button onclick="editarMedicao('${item.id}')">✏️</button>
+          <button class="btn-delete" onclick="pedirExclusao('${atual}','${item.id}')">🗑️</button>
+        </div>
+      </div>
+    `;
+  });
+
+  desenharGrafico(atual);
+  document.getElementById("historicoModal").style.display = "block";
+}
+
+
+function excluirRegistro(nome, indice) {
+  if (!confirm("Deseja realmente excluir este registro?")) return;
+
+  const hist = JSON.parse(localStorage.getItem(nome) || "[]");
+  hist.splice(indice, 1);
+  localStorage.setItem(nome, JSON.stringify(hist));
+
+  abrir(nome);   // reabre o modal do item
+  carregar();   // atualiza os cards
+}
+
+
+
+function fecharHistorico(){
+  document.getElementById("historicoModal").style.display="none";
+}
+
+function editarMedicao(id) {
+  const hist = JSON.parse(localStorage.getItem(atual) || "[]");
+  const registro = hist.find(r => r.id === id);
+  if (!registro) return;
+
+  indiceEdicao = id;
+
+  document.getElementById("data").value = registro.data;
+  document.getElementById("valor").value = registro.valor;
+  document.getElementById("obs").value = registro.obs || "";
+
+  document.getElementById("modal").style.display = "flex";
+}
+
+
+
+function fecharTodosModais(){
+  document.getElementById("modal").style.display = "none";
+  document.getElementById("configModal").style.display = "none";
+  document.getElementById("historicoModal").style.display = "none";
+}
+
+
+// ------------------- CONFIG -------------------
+function abrirConfig(){
+  fecharTodosModais();
+  const cfg = carregarConfig();
+  const div = document.getElementById("configCampos");
+  div.innerHTML="";
+  itens.forEach(nome=>{
+    div.innerHTML+=`
+      <div class="config-item"><label>${nome} – Intervalo (dias)</label>
+      <input type="number" id="dias_${nome}" value="${cfg[nome].dias}">
+      <label>${nome} – Valor ideal</label>
+      <input type="number" step="any" id="ideal_${nome}" value="${cfg[nome].ideal??""}"></div>
+    `;
+  });
+  document.getElementById("configModal").style.display="flex";
+}
+
+function fecharConfig(){
+  document.getElementById("configModal").style.display="none";
+}
+
+function obterUltimaData(historico) {
+  if (!historico.length) return null;
+
+  let maisRecente = historico[0];
+
+  historico.forEach(item => {
+    if (new Date(item.data) > new Date(maisRecente.data)) {
+      maisRecente = item;
+    }
+  });
+
+  return maisRecente.data;
+}
+
+function salvarConfig(){
+  const cfg = {};
+  itens.forEach(nome=>{
+    cfg[nome]={
+      dias:parseInt(document.getElementById("dias_"+nome).value),
+      ideal:parseFloat(document.getElementById("ideal_"+nome).value)
+    };
+  });
+  localStorage.setItem("config", JSON.stringify(cfg));
+  fecharConfig();
+  carregar();
+}
+
+function fecharConfirm() {
+  document.getElementById("confirmModal").style.display = "none";
+}
+
+
+
+function pedirExclusao(item, id) {
+  excluirItem = item;
+  excluirId = id;
+  document.getElementById("confirmModal").style.display = "flex";
+}
+
+function confirmarExclusao() {
+  let hist = JSON.parse(localStorage.getItem(excluirItem) || "[]");
+
+  hist = hist.filter(r => r.id !== excluirId);
+
+  localStorage.setItem(excluirItem, JSON.stringify(hist));
+  normalizarHistorico(excluirItem);
+
+  fecharConfirm();
+  abrirHistorico();
+  carregar();
+}
+
+
+
+function exportarDados() {
+  const backup = {
+    versao: 2,
+    dataExportacao: new Date().toISOString(),
+    configuracoes: JSON.parse(localStorage.getItem("config") || "{}"),
+    dados: {}
+  };
+
+  itens.forEach(nome => {
+    const hist = JSON.parse(localStorage.getItem(nome) || "[]");
+
+    backup.dados[nome] = hist.map(r => ({
+      id: r.id || crypto.randomUUID(),
+      data: r.data,
+      valor: r.valor,
+      obs: r.obs || ""
+    }));
+  });
+
+  const blob = new Blob(
+    [JSON.stringify(backup, null, 2)],
+    { type: "application/json" }
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "backup_aquario.json";
+  a.click();
+}
+
+
+
+function importarDados(file) {
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    try {
+      const backup = JSON.parse(e.target.result);
+
+      if (!backup.dados) {
+        alert("Arquivo inválido.");
+        return;
+      }
+
+      // Configurações
+      if (backup.configuracoes) {
+        localStorage.setItem(
+          "config",
+          JSON.stringify(backup.configuracoes)
+        );
+      }
+
+      // Dados
+      Object.keys(backup.dados).forEach(nome => {
+        let hist = backup.dados[nome];
+
+        hist = hist.map(r => ({
+          id: r.id || crypto.randomUUID(), // 🔑 garante id
+          data: r.data,
+          valor: r.valor,
+          obs: r.obs || ""
+        }));
+
+        hist.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+        localStorage.setItem(nome, JSON.stringify(hist));
+      });
+
+      alert("Backup importado com sucesso!");
+      carregar();
+
+    } catch (err) {
+      alert("Erro ao importar backup.");
+      console.error(err);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+let graficoAtual = null;
+
+
+function prepararDadosGrafico(item) {
+  const hist = JSON.parse(localStorage.getItem(item) || "[]");
+  if (hist.length === 0) return [];
+
+  hist.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  return hist.map(r => ({
+    x: new Date(r.data).getTime(), // 👈 timestamp (número)
+    y: Number(r.valor)
+  }));
+}
+
+
+
+
+
+
+function desenharGrafico(item) {
+  const canvas = document.getElementById("grafico");
+  if (!canvas) return;
+
+  const pontos = prepararDadosGrafico(item);
+  if (pontos.length === 0) return;
+
+  if (graficoAtual) graficoAtual.destroy();
+
+  graficoAtual = new Chart(canvas.getContext("2d"), {
+    type: "line",
+    data: {
+      datasets: [{
+        label: item,
+        data: pontos,
+        parsing: false,
+        borderColor: "#4fc3f7",
+        backgroundColor: "rgba(79,195,247,0.2)",
+        tension: 0.3,
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: "linear",
+          title: { display: true, text: "Data" },
+          ticks: {
+            callback: value =>
+              new Date(value).toLocaleDateString("pt-BR")
+          }
+        },
+        y: {
+          title: { display: true, text: "Valor" }
+        }
+      }
+    }
+  });
+}
+
+function normalizarHistorico(nome) {
+  const hist = JSON.parse(localStorage.getItem(nome) || "[]");
+
+  hist.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  localStorage.setItem(nome, JSON.stringify(hist));
+  return hist;
+}
+
+
+// ------------------- INIT -------------------
+carregar();
+
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("Service Worker registrado"))
+    .catch(err => console.error("SW erro", err));
+}
+
+
+
+</script>
+
+
+
+
+
+</body>
+</html>
