@@ -403,7 +403,7 @@ input, textarea {
 <div class="config-backup">
   <button class="btn-backup" onclick="exportarDados()">📤 Exportar Backup</button>
 
-  <input type="file" id="importFile" accept=".json" hidden onchange="importarDados(event)">
+  <input type="file" id="importFile" accept=".json" hidden onchange="importarDados(this.files[0])">
 
   <button class="btn-backup" onclick="document.getElementById('importFile').click()">
     📥 Importar Backup
@@ -803,18 +803,26 @@ function exportarDados() {
 
 
 function importarDados(file) {
+
+  if (!file) {
+    alert("Nenhum arquivo selecionado.");
+    return;
+  }
+
   const reader = new FileReader();
 
   reader.onload = e => {
     try {
       const backup = JSON.parse(e.target.result);
 
-      if (!backup.dados) {
-        alert("Arquivo inválido.");
+      if (!backup || !backup.dados) {
+        alert("Arquivo de backup inválido.");
         return;
       }
 
-      // Configurações
+      /* =========================
+         CONFIGURAÇÕES
+      ========================= */
       if (backup.configuracoes) {
         localStorage.setItem(
           "config",
@@ -822,33 +830,46 @@ function importarDados(file) {
         );
       }
 
-      // Dados
+      /* =========================
+         DADOS
+      ========================= */
       Object.keys(backup.dados).forEach(nome => {
-        let hist = backup.dados[nome];
+
+        let hist = Array.isArray(backup.dados[nome])
+          ? backup.dados[nome]
+          : [];
 
         hist = hist.map(r => ({
-          id: r.id || crypto.randomUUID(), // 🔑 garante id
+          id: r.id || crypto.randomUUID(),
           data: r.data,
           valor: r.valor,
           obs: r.obs || ""
         }));
 
+        // ordena sempre
         hist.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         localStorage.setItem(nome, JSON.stringify(hist));
       });
 
       alert("Backup importado com sucesso!");
+
+      fecharTodosModais();
       carregar();
 
     } catch (err) {
-      alert("Erro ao importar backup.");
       console.error(err);
+      alert("Erro ao importar o backup. Arquivo inválido.");
     }
+  };
+
+  reader.onerror = () => {
+    alert("Erro ao ler o arquivo.");
   };
 
   reader.readAsText(file);
 }
+
 
 let graficoAtual = null;
 
