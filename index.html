@@ -26,7 +26,21 @@ body {
 h2 {
   margin-bottom:10px;
 }
+#titulo {
+  font-size: 1.6rem;   /* ajuste fino aqui */
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+  
+@media (max-width: 600px) {
+  #titulo {
+    font-size: 1.8rem;
+  }
+}
 
+  
 button {
   background: linear-gradient(145deg, #1fa2d6, #137aa6);
   border: none;
@@ -412,7 +426,7 @@ textarea{
 <!-- MODAL MEDIÇÃO -->
 <div id="modal" class="modal">
   <div>
-    <h5 id="titulo"></h5>
+    <h3 id="titulo"></h3>
     <input type="date" id="data">
     <input type="number" step="any" id="valor" placeholder="Valor">
     <textarea id="obs" placeholder="Observações"></textarea>
@@ -425,7 +439,7 @@ textarea{
 <!-- MODAL HISTÓRICO -->
 <div id="historicoModal" class="modal">
   <div>
-    <h5 id="histTitulo"></h5>
+    <h3 id="histTitulo"></h3>
     <div id="listaHistorico"></div>
     <div id="grafico-container" style="margin-top:20px;">
       <canvas id="grafico" style="height:220px; width:100%;"></canvas>
@@ -437,7 +451,7 @@ textarea{
 <!-- MODAL CONFIG -->
 <div id="configModal" class="modal">
   <div class="modal-content">
-    <h5>⚙️ Configurações</h5>
+    <h3>⚙️ Configurações</h3>
 
     <div class="config-scroll">
       <div id="configCampos" class="config-grid"></div>
@@ -1004,6 +1018,7 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
+
 
 
 
