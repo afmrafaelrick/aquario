@@ -442,7 +442,11 @@ textarea{
     <h3 id="histTitulo"></h3>
     <div id="listaHistorico"></div>
     <div id="grafico-container" style="margin-top:20px;">
-      <canvas id="grafico" style="height:220px; width:100%;"></canvas>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:26px;">
+      <input type="checkbox" id="chkTPA" style="transform: scale(1.6);">
+      <label for="chkTPA" style="cursor:pointer;">Adicionar TPA</label>
+    </div>
+    <canvas id="grafico" style="height:220px; width:100%;"></canvas>
     </div>
     <button onclick="fecharHistorico()">Fechar</button>
   </div>
@@ -706,7 +710,20 @@ function abrirHistorico() {
     `;
   });
 
-  desenharGrafico(atual);
+
+
+// Checkbox "Adicionar TPA" (marca TPAs como linhas verticais)
+const chkTPA = document.getElementById("chkTPA");
+if (chkTPA) {
+  chkTPA.checked = getMostrarTPA();
+  chkTPA.onchange = () => {
+    setMostrarTPA(chkTPA.checked);
+    desenharGrafico(atual);
+  };
+}
+
+desenharGrafico(atual);
+
   document.getElementById("historicoModal").style.display = "block";
 }
 
@@ -928,6 +945,68 @@ function importarDados(file) {
 
 
 let graficoAtual = null;
+// ------------------- MARCAÇÃO DE TPA NO GRÁFICO -------------------
+// Lê o histórico de "TPA" e devolve timestamps (ms) normalizados para 00:00 do dia.
+function obterTpaTimestamps() {
+  const histTpa = JSON.parse(localStorage.getItem("TPA") || "[]");
+  if (!Array.isArray(histTpa) || histTpa.length === 0) return [];
+
+  // normaliza para YYYY-MM-DD e depois para timestamp do início do dia (local)
+  const diasUnicos = new Set(
+    histTpa
+      .map(r => (r?.data || "").slice(0, 10))
+      .filter(Boolean)
+  );
+
+  const ts = [];
+  diasUnicos.forEach(dia => {
+    const d = new Date(dia + "T00:00:00");
+    const t = d.getTime();
+    if (Number.isFinite(t)) ts.push(t);
+  });
+
+  ts.sort((a, b) => a - b);
+  return ts;
+}
+
+// Plugin simples para desenhar linhas verticais nas datas de TPA
+const tpaLinesPlugin = {
+  id: "tpaLines",
+  afterDraw(chart, args, opts) {
+    if (!opts || !opts.enabled) return;
+
+    const xs = Array.isArray(opts.xs) ? opts.xs : [];
+    if (xs.length === 0) return;
+
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales?.x;
+    if (!xScale) return;
+
+    ctx.save();
+    ctx.lineWidth = opts.lineWidth ?? 2;
+    ctx.setLineDash(opts.dash ?? [6, 6]);
+    ctx.strokeStyle = opts.color ?? "rgba(255,255,255,0.45)";
+
+    ctx.beginPath();
+    for (const xVal of xs) {
+      const px = xScale.getPixelForValue(xVal);
+      if (!Number.isFinite(px)) continue;
+      ctx.moveTo(px, chartArea.top);
+      ctx.lineTo(px, chartArea.bottom);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+// Estado do checkbox (persistido)
+function getMostrarTPA() {
+  return localStorage.getItem("mostrarTPA") === "1";
+}
+function setMostrarTPA(v) {
+  localStorage.setItem("mostrarTPA", v ? "1" : "0");
+}
+
 
 
 function prepararDadosGrafico(item) {
@@ -958,7 +1037,8 @@ function desenharGrafico(item) {
 
   graficoAtual = new Chart(canvas.getContext("2d"), {
     type: "line",
-    data: {
+    
+    plugins: [tpaLinesPlugin],data: {
       datasets: [{
         label: item,
         data: pontos,
@@ -971,6 +1051,16 @@ function desenharGrafico(item) {
     },
     options: {
       responsive: true,
+      plugins: {
+        tpaLines: {
+          enabled: getMostrarTPA(),
+          xs: obterTpaTimestamps(),
+          // aparência das linhas
+          lineWidth: 2,
+          dash: [6, 6],
+          color: "rgba(255,255,255,0.45)"
+        }
+      },
       scales: {
         x: {
           type: "linear",
@@ -1018,11 +1108,3 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
