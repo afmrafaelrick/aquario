@@ -119,7 +119,7 @@ button.secundario {
   position: relative; /* permite sobreposição */
   width: 100%;
   max-width: 100%;
-  overflow: hidden;1
+  overflow: hidden;
 }
 
 .card:hover {
@@ -1473,7 +1473,7 @@ function desenharGrafico(item) {
   });
 }
 
-function normalizarHistoricofunction normalizarHistorico(nome) {
+function normalizarHistorico(nome) {
   const hist = JSON.parse(localStorage.getItem(nome) || "[]");
 
   hist.sort((a, b) => new Date(a.data) - new Date(b.data));
