@@ -408,6 +408,79 @@ textarea{
 }
 
 
+
+/* --- Analytics --- */
+.kpi-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:10px 0 6px 0;
+}
+.kpi{
+  flex:1 1 140px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.kpi .kpi-label{
+  font-size: 12px;
+  opacity: .85;
+}
+.kpi .kpi-value{
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.toggle-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:14px;
+  margin-bottom:10px;
+  font-size: 22px;
+}
+.toggle-row input{
+  transform: scale(1.4);
+}
+.analytics-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap:12px;
+  margin:12px 0;
+}
+.analytics-card{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.analytics-card h4{
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+.analytics-table{
+  width:100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.analytics-table th, .analytics-table td{
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  padding: 8px 6px;
+  text-align:left;
+}
+.badge{
+  display:inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+}
+.badge.warn{ background: rgba(241, 196, 15, 0.18); }
+.badge.danger{ background: rgba(231, 76, 60, 0.18); }
+
 </style>
 </head>
 
@@ -420,6 +493,8 @@ textarea{
 
 
 <button onclick="abrirConfig()">⚙️ Configurações</button>
+
+<button onclick="abrirAnalytics()">📊 Analytics</button>
 
 <div id="cards"></div>
 
@@ -442,13 +517,45 @@ textarea{
     <h3 id="histTitulo"></h3>
     <div id="listaHistorico"></div>
     <div id="grafico-container" style="margin-top:20px;">
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:26px;">
+      <div id="histKpi" class="kpi-row"></div>
+
+      <div class="toggle-row">
       <input type="checkbox" id="chkTPA" style="transform: scale(1.6);">
       <label for="chkTPA" style="cursor:pointer;">Adicionar TPA</label>
+      <span class="badge">+</span>
+      <input type="checkbox" id="chkMA7">
+      <label for="chkMA7" style="cursor:pointer;">Média 7 dias</label>
+      <input type="checkbox" id="chkIdeal">
+      <label for="chkIdeal" style="cursor:pointer;">Linha ideal</label>
+
     </div>
     <canvas id="grafico" style="height:220px; width:100%;"></canvas>
     </div>
     <button onclick="fecharHistorico()">Fechar</button>
+  </div>
+</div>
+
+
+<!-- MODAL ANALYTICS -->
+<div id="analyticsModal" class="modal">
+  <div class="modal-content">
+    <h3>📊 Aquarismo Analytics</h3>
+
+    <div id="analyticsCards" class="analytics-grid"></div>
+
+    <div class="analytics-card">
+      <h4>📌 Pendências (por intervalo)</h4>
+      <div id="analyticsPendencias"></div>
+    </div>
+
+    <div class="analytics-card">
+      <h4>🎯 Desvio do ideal (último valor)</h4>
+      <div id="analyticsDesvios"></div>
+    </div>
+
+    <div class="modal-botoes">
+      <button class="secundario" onclick="fecharAnalytics()">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -712,14 +819,21 @@ function abrirHistorico() {
 
 
 
-// Checkbox "Adicionar TPA" (marca TPAs como linhas verticais)
+// Toggles do gráfico
 const chkTPA = document.getElementById("chkTPA");
 if (chkTPA) {
   chkTPA.checked = getMostrarTPA();
-  chkTPA.onchange = () => {
-    setMostrarTPA(chkTPA.checked);
-    desenharGrafico(atual);
-  };
+  chkTPA.onchange = () => { setMostrarTPA(chkTPA.checked); desenharGrafico(atual); };
+}
+const chkMA7 = document.getElementById("chkMA7");
+if (chkMA7) {
+  chkMA7.checked = getMostrarMA7();
+  chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
+}
+const chkIdeal = document.getElementById("chkIdeal");
+if (chkIdeal) {
+  chkIdeal.checked = getMostrarIdeal();
+  chkIdeal.onchange = () => { setMostrarIdeal(chkIdeal.checked); desenharGrafico(atual); };
 }
 
 desenharGrafico(atual);
@@ -765,6 +879,8 @@ function fecharTodosModais(){
   document.getElementById("modal").style.display = "none";
   document.getElementById("configModal").style.display = "none";
   document.getElementById("historicoModal").style.display = "none";
+  const am = document.getElementById("analyticsModal");
+  if (am) am.style.display = "none";
 }
 
 
@@ -1008,6 +1124,248 @@ function setMostrarTPA(v) {
 }
 
 
+// Estado dos toggles do gráfico (persistidos)
+function getMostrarMA7(){ return localStorage.getItem("mostrarMA7")==="1"; }
+function setMostrarMA7(v){ localStorage.setItem("mostrarMA7", v ? "1":"0"); }
+function getMostrarIdeal(){ return localStorage.getItem("mostrarIdeal")==="1"; }
+function setMostrarIdeal(v){ localStorage.setItem("mostrarIdeal", v ? "1":"0"); }
+
+// Util numérica
+function isNumero(v){ return typeof v === "number" && Number.isFinite(v); }
+function round(v, casas=2){
+  if(!isNumero(v)) return "—";
+  const f = Math.pow(10, casas);
+  return (Math.round(v*f)/f).toString().replace(".", ",");
+}
+
+// KPIs para o histórico (últimos N dias)
+function filtrarPorDias(pontos, dias){
+  const agora = Date.now();
+  const lim = agora - dias*24*60*60*1000;
+  return pontos.filter(p => p.x >= lim);
+}
+
+function statsBasicos(pontos){
+  if(!pontos.length) return null;
+  const ys = pontos.map(p=>p.y).filter(isNumero);
+  if(!ys.length) return null;
+  const min = Math.min(...ys);
+  const max = Math.max(...ys);
+  const avg = ys.reduce((a,b)=>a+b,0)/ys.length;
+  const last = pontos[pontos.length-1].y;
+  return {min,max,avg,last};
+}
+
+// Tendência via regressão linear simples (slope em "unidades por dia")
+function slopePorDia(pontos){
+  if(pontos.length < 2) return null;
+  const xs = pontos.map(p=>p.x);
+  const ys = pontos.map(p=>p.y);
+  const n = pontos.length;
+  const meanX = xs.reduce((a,b)=>a+b,0)/n;
+  const meanY = ys.reduce((a,b)=>a+b,0)/n;
+  let num = 0, den = 0;
+  for(let i=0;i<n;i++){
+    const dx = xs[i]-meanX;
+    num += dx*(ys[i]-meanY);
+    den += dx*dx;
+  }
+  if(den === 0) return null;
+  const slopePerMs = num/den;
+  return slopePerMs * 24*60*60*1000; // por dia
+}
+
+// Média móvel por janela em dias (time-based)
+function mediaMovelPorDias(pontos, dias){
+  const janelaMs = dias*24*60*60*1000;
+  const out = [];
+  let i0 = 0;
+  let soma = 0;
+  let count = 0;
+  // Usamos uma fila simples
+  const fila = [];
+  for(const p of pontos){
+    const x = p.x, y = p.y;
+    // expira
+    while(fila.length && (x - fila[0].x) > janelaMs){
+      const r = fila.shift();
+      soma -= r.y;
+      count -= 1;
+    }
+    fila.push({x,y});
+    soma += y;
+    count += 1;
+    out.push({x, y: count ? soma/count : null});
+  }
+  return out;
+}
+
+// Efeito médio pós-TPA: encontra medição mais próxima antes/depois (até 2 dias)
+function efeitoPosTPA(pontos, tpaTs){
+  if(!pontos.length || !tpaTs.length) return null;
+  const maxDist = 2*24*60*60*1000;
+  const deltas = [];
+  for(const t of tpaTs){
+    // antes
+    let antes = null;
+    for(let i=pontos.length-1;i>=0;i--){
+      if(pontos[i].x <= t && (t - pontos[i].x) <= maxDist){ antes = pontos[i]; break; }
+      if(pontos[i].x < t - maxDist) break;
+    }
+    // depois
+    let depois = null;
+    for(let i=0;i<pontos.length;i++){
+      if(pontos[i].x >= t && (pontos[i].x - t) <= maxDist){ depois = pontos[i]; break; }
+      if(pontos[i].x > t + maxDist) break;
+    }
+    if(antes && depois && isNumero(antes.y) && isNumero(depois.y)){
+      deltas.push(depois.y - antes.y);
+    }
+  }
+  if(!deltas.length) return null;
+  return deltas.reduce((a,b)=>a+b,0)/deltas.length;
+}
+
+function atualizarKpisHistorico(item, pontos){
+  const div = document.getElementById("histKpi");
+  if(!div) return;
+
+  const p30 = filtrarPorDias(pontos, 30);
+  const st = statsBasicos(p30);
+  const sl = slopePorDia(p30);
+  const cfg = carregarConfig();
+  const ideal = cfg?.[item]?.ideal;
+  const eff = efeitoPosTPA(pontos, obterTpaTimestamps());
+
+  const tendencia = (sl===null) ? "—" : (sl>0 ? `▲ ${round(sl,3)}/dia` : `▼ ${round(Math.abs(sl),3)}/dia`);
+  const desvioIdeal = (isNumero(ideal) && st && isNumero(st.last)) ? (st.last - ideal) : null;
+
+  div.innerHTML = `
+    <div class="kpi"><div class="kpi-label">Último</div><div class="kpi-value">${st?round(st.last):"—"}</div></div>
+    <div class="kpi"><div class="kpi-label">Média 30d</div><div class="kpi-value">${st?round(st.avg):"—"}</div></div>
+    <div class="kpi"><div class="kpi-label">Min/Max 30d</div><div class="kpi-value">${st?`${round(st.min)} / ${round(st.max)}`:"—"}</div></div>
+    <div class="kpi"><div class="kpi-label">Tendência 30d</div><div class="kpi-value">${tendencia}</div></div>
+    <div class="kpi"><div class="kpi-label">Pós-TPA (médio)</div><div class="kpi-value">${eff===null?"—":(eff>0?`+${round(eff)}`:round(eff))}</div></div>
+    <div class="kpi"><div class="kpi-label">Desvio do ideal</div><div class="kpi-value">${desvioIdeal===null?"—":(desvioIdeal>0?`+${round(desvioIdeal)}`:round(desvioIdeal))}</div></div>
+  `;
+}
+
+// ------------------- MODAL ANALYTICS -------------------
+function abrirAnalytics(){
+  fecharTodosModais();
+  document.getElementById("analyticsModal").style.display="flex";
+  renderAnalytics();
+}
+
+function fecharAnalytics(){
+  document.getElementById("analyticsModal").style.display="none";
+}
+
+function ultimaTPAData(){
+  const hist = JSON.parse(localStorage.getItem("TPA")||"[]");
+  if(!hist.length) return null;
+  let max = hist[0].data;
+  for(const r of hist){
+    if(new Date(r.data) > new Date(max)) max = r.data;
+  }
+  return max;
+}
+
+function mediaIntervaloTPA(){
+  const ts = obterTpaTimestamps();
+  if(ts.length < 2) return null;
+  let soma = 0;
+  for(let i=1;i<ts.length;i++){
+    soma += (ts[i]-ts[i-1]);
+  }
+  const mediaMs = soma/(ts.length-1);
+  return mediaMs/(24*60*60*1000);
+}
+
+function renderAnalytics(){
+  const cards = document.getElementById("analyticsCards");
+  const pend = document.getElementById("analyticsPendencias");
+  const desv = document.getElementById("analyticsDesvios");
+  if(!cards || !pend || !desv) return;
+
+  const cfg = carregarConfig();
+
+  // Cards topo: TPA
+  const uTPA = ultimaTPAData();
+  const mTPA = mediaIntervaloTPA();
+
+  cards.innerHTML = `
+    <div class="analytics-card">
+      <h4>💧 TPAs</h4>
+      <div><span class="badge">Última</span> ${uTPA ? new Date(uTPA).toLocaleDateString("pt-BR") : "—"}</div>
+      <div style="margin-top:6px;"><span class="badge">Intervalo médio</span> ${mTPA===null ? "—" : `${round(mTPA,1)} dias`}</div>
+    </div>
+    <div class="analytics-card">
+      <h4>🗂️ Base de dados</h4>
+      <div><span class="badge">Itens</span> ${itens.length}</div>
+      <div style="margin-top:6px;"><span class="badge">Registros</span> ${itens.reduce((a,n)=>a + (JSON.parse(localStorage.getItem(n)||"[]").length),0)}</div>
+    </div>
+  `;
+
+  // Pendências por intervalo (top 6)
+  const pendencias = [];
+  itens.forEach(nome=>{
+    const hist = JSON.parse(localStorage.getItem(nome)||"[]");
+    const ultima = obterUltimaData(hist);
+    const diasStr = diasDesde(ultima);
+    const limite = cfg?.[nome]?.dias;
+    if(!limite || limite===null || isNaN(limite)) return;
+    const dias = (diasStr==="Hoje") ? 0 : (diasStr==="1 dia") ? 1 : (diasStr==="Nunca") ? null : parseInt(diasStr);
+    if(dias===null || isNaN(dias)) return;
+    const atraso = dias - limite;
+    pendencias.push({nome, dias, limite, atraso});
+  });
+
+  pendencias.sort((a,b)=> b.atraso - a.atraso);
+  const topPend = pendencias.slice(0, 6);
+
+  pend.innerHTML = `
+    <table class="analytics-table">
+      <thead><tr><th>Item</th><th>Última</th><th>Ideal</th><th>Status</th></tr></thead>
+      <tbody>
+        ${topPend.map(p=>{
+          const st = p.atraso <= 0 ? "ok" : (p.atraso <= p.limite*0.2 ? "warn" : "danger");
+          const badge = st==="ok" ? '<span class="badge">OK</span>' : st==="warn" ? '<span class="badge warn">Atenção</span>' : '<span class="badge danger">Atrasado</span>';
+          return `<tr><td>${p.nome}</td><td>${p.dias}d</td><td>${p.limite}d</td><td>${badge}</td></tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+
+  // Desvio do ideal (top 6)
+  const desvios = [];
+  itens.forEach(nome=>{
+    const ideal = cfg?.[nome]?.ideal;
+    if(!isNumero(ideal)) return;
+    const hist = JSON.parse(localStorage.getItem(nome)||"[]");
+    if(!hist.length) return;
+    hist.sort((a,b)=> new Date(a.data)-new Date(b.data));
+    const last = Number(hist[hist.length-1].valor);
+    if(!isNumero(last)) return;
+    desvios.push({nome, last, ideal, diff: last-ideal, abs: Math.abs(last-ideal)});
+  });
+  desvios.sort((a,b)=> b.abs - a.abs);
+  const topDesv = desvios.slice(0, 6);
+
+  desv.innerHTML = topDesv.length ? `
+    <table class="analytics-table">
+      <thead><tr><th>Item</th><th>Último</th><th>Ideal</th><th>Δ</th></tr></thead>
+      <tbody>
+        ${topDesv.map(d=>{
+          const delta = d.diff;
+          const txt = delta>0 ? `+${round(delta)}` : round(delta);
+          return `<tr><td>${d.nome}</td><td>${round(d.last)}</td><td>${round(d.ideal)}</td><td>${txt}</td></tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  ` : "<div>Defina valores ideais nas Configurações para ver este ranking.</div>";
+}
+
 
 function prepararDadosGrafico(item) {
   const hist = JSON.parse(localStorage.getItem(item) || "[]");
@@ -1026,6 +1384,7 @@ function prepararDadosGrafico(item) {
 
 
 
+
 function desenharGrafico(item) {
   const canvas = document.getElementById("grafico");
   if (!canvas) return;
@@ -1033,41 +1392,77 @@ function desenharGrafico(item) {
   const pontos = prepararDadosGrafico(item);
   if (pontos.length === 0) return;
 
+  // KPIs
+  atualizarKpisHistorico(item, pontos);
+
   if (graficoAtual) graficoAtual.destroy();
+
+  const datasets = [{
+    label: item,
+    data: pontos,
+    parsing: false,
+    borderColor: "#4fc3f7",
+    backgroundColor: "rgba(79,195,247,0.2)",
+    tension: 0.3,
+    pointRadius: 4
+  }];
+
+  // Média móvel 7 dias
+  if (getMostrarMA7()) {
+    const ma = mediaMovelPorDias(pontos, 7);
+    datasets.push({
+      label: "Média 7 dias",
+      data: ma,
+      parsing: false,
+      borderColor: "rgba(255,255,255,0.65)",
+      backgroundColor: "rgba(255,255,255,0.08)",
+      tension: 0.25,
+      pointRadius: 0,
+      borderWidth: 2
+    });
+  }
+
+  // Linha ideal (se configurada)
+  if (getMostrarIdeal()) {
+    const cfg = carregarConfig();
+    const ideal = cfg?.[item]?.ideal;
+    if (typeof ideal === "number" && Number.isFinite(ideal)) {
+      const minX = pontos[0].x;
+      const maxX = pontos[pontos.length - 1].x;
+      datasets.push({
+        label: "Ideal",
+        data: [{x:minX, y: ideal},{x:maxX, y: ideal}],
+        parsing: false,
+        borderColor: "rgba(46, 204, 113, 0.85)",
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0
+      });
+    }
+  }
 
   graficoAtual = new Chart(canvas.getContext("2d"), {
     type: "line",
-    
-    plugins: [tpaLinesPlugin],data: {
-      datasets: [{
-        label: item,
-        data: pontos,
-        parsing: false,
-        borderColor: "#4fc3f7",
-        backgroundColor: "rgba(79,195,247,0.2)",
-        tension: 0.3,
-        pointRadius: 4
-      }]
-    },
+    plugins: [tpaLinesPlugin],
+    data: { datasets },
     options: {
       responsive: true,
       plugins: {
         tpaLines: {
           enabled: getMostrarTPA(),
           xs: obterTpaTimestamps(),
-          // aparência das linhas
           lineWidth: 2,
           dash: [6, 6],
           color: "rgba(255,255,255,0.45)"
-        }
+        },
+        legend: { display: true }
       },
       scales: {
         x: {
           type: "linear",
           title: { display: true, text: "Data" },
           ticks: {
-            callback: value =>
-              new Date(value).toLocaleDateString("pt-BR")
+            callback: value => new Date(value).toLocaleDateString("pt-BR")
           }
         },
         y: {
@@ -1078,7 +1473,7 @@ function desenharGrafico(item) {
   });
 }
 
-function normalizarHistorico(nome) {
+function normalizarHistoricofunction normalizarHistorico(nome) {
   const hist = JSON.parse(localStorage.getItem(nome) || "[]");
 
   hist.sort((a, b) => new Date(a.data) - new Date(b.data));
