@@ -688,16 +688,13 @@ textarea{
 
       <!-- TAB: GRÁFICO -->
       <div class="tab-panel" id="tab-grafico" role="tabpanel">
-        <div class="toggle-chips" style="margin:8px 0 10px;">
-          <label class="chip">
-            <input type="checkbox" id="chkTPA">
-            <span>Adicionar TPA</span>
-          </label>
+        <div id="eventChips" class="toggle-chips" style="margin:8px 0 10px;"></div>
+        <div class="toggle-chips" style="margin:0 0 10px;">
           <label class="chip">
             <input type="checkbox" id="chkMA7">
             <span>Média 7 dias</span>
           </label>
-          <label class="chip">
+          <label class="chip" id="chipIdeal">
             <input type="checkbox" id="chkIdeal">
             <span>Linha ideal</span>
           </label>
@@ -786,7 +783,7 @@ textarea{
 const itens = [
   "TPA","Densidade","KH","Fosfato","pH",
   "Nitrito","Amônia","Perlon","Phosgard","Aquapure",
-  "Fuel","Carbonate","BioActive","Stability"
+  "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton"
 ];
 
 const icones = {
@@ -803,7 +800,9 @@ const icones = {
   Fuel: "🔥",
   Carbonate: "🪨",
   BioActive: "🦠",
-  Stability: "⚓"
+  Stability: "⚓",
+  ZooPlancton: "🦐",
+  PhytoPlancton: "🧬"
 };
 
 const statusIcone = {
@@ -829,7 +828,9 @@ const configPadrao = {
   Fuel:{dias:null, ideal:null},
   Carbonate:{dias:null, ideal:null},
   BioActive:{dias:null, ideal:null},
-  Stability:{dias:null, ideal:null}
+  Stability:{dias:null, ideal:null},
+  ZooPlancton:{dias:null, ideal:null},
+  PhytoPlancton:{dias:null, ideal:null}
 };
 
 function carregarConfig(){
@@ -847,6 +848,92 @@ function carregarConfig(){
   return cfgFinal;
 }
 
+
+
+// ------------------- ANALYTICS (gráficos e influências) -------------------
+const ANALYTICS_CONFIG = {
+  // Parâmetros com gráfico
+  Densidade: { grafico: true, eventos: ["TPA"] },
+  KH:        { grafico: true, eventos: ["TPA", "Carbonate"] },
+  Fosfato:   { grafico: true, eventos: ["TPA", "Phosgard"] },
+  pH:        { grafico: true, eventos: ["TPA"] },
+  Nitrito:   { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
+  Amônia:    { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
+  Carbonate: { grafico: true, eventos: ["TPA"] },
+
+  // Itens sem gráfico (apenas registros)
+  TPA:          { grafico: false },
+  Perlon:       { grafico: false },
+  Phosgard:     { grafico: false },
+  Aquapure:     { grafico: false },
+  Fuel:         { grafico: false },
+  BioActive:    { grafico: false },
+  Stability:    { grafico: false },
+  ZooPlancton:  { grafico: false },
+  PhytoPlancton:{ grafico: false }
+};
+
+// Agrupamentos de eventos (um checkbox representa vários registros)
+const EVENT_GROUPS = {
+  Bacterias: ["BioActive", "Stability"]
+};
+
+const EVENT_LABELS = {
+  TPA: "TPA",
+  Carbonate: "Carbonate",
+  Phosgard: "Phosgard",
+  Perlon: "Perlon",
+  Bacterias: "Bactérias"
+};
+
+function itemTemGrafico(nome){
+  return ANALYTICS_CONFIG?.[nome]?.grafico === true;
+}
+
+function eventosDoGrafico(nome){
+  return ANALYTICS_CONFIG?.[nome]?.eventos || [];
+}
+
+// Persistência dos toggles por item
+function _getEventState(){
+  return JSON.parse(localStorage.getItem("eventToggles") || "{}");
+}
+function _setEventState(obj){
+  localStorage.setItem("eventToggles", JSON.stringify(obj));
+}
+function getEventoAtivo(item, evento){
+  const st = _getEventState();
+  const key = item + "::" + evento;
+  // padrão: ligado
+  return st[key] ?? true;
+}
+function setEventoAtivo(item, evento, val){
+  const st = _getEventState();
+  const key = item + "::" + evento;
+  st[key] = !!val;
+  _setEventState(st);
+}
+
+function getChipTexto(evento){
+  return EVENT_LABELS[evento] || evento;
+}
+
+function obterTimestampsEvento(evento){
+  const fontes = EVENT_GROUPS[evento] || [evento];
+  let xs = [];
+  for (const nome of fontes){
+    const arr = JSON.parse(localStorage.getItem(nome) || "[]");
+    for (const r of arr){
+      if (r?.data){
+        const t = new Date(r.data).getTime();
+        if (Number.isFinite(t)) xs.push(t);
+      }
+    }
+  }
+  // únicos + ordenados
+  xs = Array.from(new Set(xs)).sort((a,b)=>a-b);
+  return xs;
+}
 
 // ------------------- UTIL -------------------
 function diasDesde(dataStr){
@@ -992,6 +1079,44 @@ function setTabHistorico(tab) {
   }
 }
 
+function ajustarAbasHistorico(temGrafico){
+  const btnGraf = document.querySelector('#historicoModal .tab-btn[data-tab="grafico"]');
+  const btnIns = document.querySelector('#historicoModal .tab-btn[data-tab="insights"]');
+  const pnlGraf = document.getElementById('tab-grafico');
+  const pnlIns = document.getElementById('tab-insights');
+
+  const disp = temGrafico ? "" : "none";
+  if (btnGraf) btnGraf.style.display = disp;
+  if (btnIns) btnIns.style.display = disp;
+  if (pnlGraf) pnlGraf.style.display = disp;
+  if (pnlIns) pnlIns.style.display = disp;
+
+  if (!temGrafico) {
+    setTabHistorico("registros");
+  }
+}
+
+function renderEventChips(item){
+  const box = document.getElementById("eventChips");
+  if (!box) return;
+  box.innerHTML = "";
+
+  const eventos = eventosDoGrafico(item);
+  for (const ev of eventos){
+    const id = "chkEvt_" + ev;
+    const label = document.createElement("label");
+    label.className = "chip";
+    label.innerHTML = `<input type="checkbox" id="${id}"><span>${getChipTexto(ev)}</span>`;
+    box.appendChild(label);
+
+    const input = label.querySelector("input");
+    input.checked = getEventoAtivo(item, ev);
+    input.onchange = () => { setEventoAtivo(item, ev, input.checked); desenharGrafico(item); };
+  }
+}
+
+
+
 function renderHistoricoLista() {
   const lista = document.getElementById("listaHistorico");
   const resumo = document.getElementById("histResumoRegistros");
@@ -1052,25 +1177,37 @@ function abrirHistorico() {
   // Tabs: sempre começa em Registros
   setTabHistorico("registros");
 
-  // Toggles do gráfico
-  const chkTPA = document.getElementById("chkTPA");
-  if (chkTPA) {
-    chkTPA.checked = getMostrarTPA();
-    chkTPA.onchange = () => { setMostrarTPA(chkTPA.checked); desenharGrafico(atual); };
-  }
-  const chkMA7 = document.getElementById("chkMA7");
-  if (chkMA7) {
-    chkMA7.checked = getMostrarMA7();
-    chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
-  }
-  const chkIdeal = document.getElementById("chkIdeal");
-  if (chkIdeal) {
-    chkIdeal.checked = getMostrarIdeal();
-    chkIdeal.onchange = () => { setMostrarIdeal(chkIdeal.checked); desenharGrafico(atual); };
-  }
+  // Ajusta abas conforme item ter (ou não) gráfico
+  const temGrafico = itemTemGrafico(atual);
+  ajustarAbasHistorico(temGrafico);
 
-  // Já calcula KPIs, mesmo que o usuário não vá na aba Insights agora
-  desenharGrafico(atual);
+  // Chips de eventos (TPA / Carbonate / etc.) – gerados dinamicamente
+  renderEventChips(atual);
+
+
+
+  // Gráfico/KPIs apenas quando aplicável
+  if (temGrafico) {
+    // mostra/oculta chip ideal conforme existir ideal numérico
+    const cfg = carregarConfig();
+    const ideal = cfg?.[atual]?.ideal;
+    const chipIdeal = document.getElementById('chipIdeal');
+    if (chipIdeal) chipIdeal.style.display = (typeof ideal === 'number' && Number.isFinite(ideal)) ? '' : 'none';
+
+    // Inicializa toggles MA7/Ideal
+    const chkMA7 = document.getElementById('chkMA7');
+    if (chkMA7) {
+      chkMA7.checked = getMostrarMA7();
+      chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
+    }
+    const chkIdeal = document.getElementById('chkIdeal');
+    if (chkIdeal) {
+      chkIdeal.checked = getMostrarIdeal();
+      chkIdeal.onchange = () => { setMostrarIdeal(chkIdeal.checked); desenharGrafico(atual); };
+    }
+
+    desenharGrafico(atual);
+  }
 
   document.getElementById("historicoModal").style.display = "block";
 }
@@ -1319,32 +1456,63 @@ function obterTpaTimestamps() {
   return ts;
 }
 
-// Plugin simples para desenhar linhas verticais nas datas de TPA
-const tpaLinesPlugin = {
-  id: "tpaLines",
-  afterDraw(chart, args, opts) {
-    if (!opts || !opts.enabled) return;
+function montarLinhasEventos(item, pontos){
+  const eventos = eventosDoGrafico(item);
+  if (!eventos.length) return [];
 
-    const xs = Array.isArray(opts.xs) ? opts.xs : [];
-    if (xs.length === 0) return;
+  // limita marcações ao intervalo exibido no gráfico para performance
+  const minX = pontos[0]?.x ?? -Infinity;
+  const maxX = pontos[pontos.length-1]?.x ?? Infinity;
+
+  const estilos = {
+    TPA:       { dash:[6,6],  color:"rgba(255,255,255,0.45)", lineWidth:2 },
+    Carbonate: { dash:[2,6],  color:"rgba(79,195,247,0.55)",  lineWidth:2 },
+    Phosgard:  { dash:[10,4], color:"rgba(255,193,7,0.45)",   lineWidth:2 },
+    Perlon:    { dash:[1,5],  color:"rgba(200,200,200,0.35)", lineWidth:2 },
+    Bacterias: { dash:[4,2],  color:"rgba(46,204,113,0.45)",  lineWidth:2 }
+  };
+
+  const linhas = [];
+  for (const ev of eventos){
+    if (!getEventoAtivo(item, ev)) continue;
+    const xsAll = obterTimestampsEvento(ev);
+    const xs = xsAll.filter(t => t >= minX && t <= maxX);
+    if (!xs.length) continue;
+    linhas.push({ xs, ...(estilos[ev] || {}) });
+  }
+  return linhas;
+}
+
+
+
+// Plugin simples para desenhar linhas verticais nas datas de TPA
+const eventLinesPlugin = { id: "eventLines",
+  afterDraw(chart, args, opts) {
+    const lines = opts?.lines || [];
+    if (!lines.length) return;
 
     const { ctx, chartArea, scales } = chart;
-    const xScale = scales?.x;
-    if (!xScale) return;
+    const x = scales.x;
+    if (!x) return;
 
     ctx.save();
-    ctx.lineWidth = opts.lineWidth ?? 2;
-    ctx.setLineDash(opts.dash ?? [6, 6]);
-    ctx.strokeStyle = opts.color ?? "rgba(255,255,255,0.45)";
+    for (const ln of lines) {
+      const xs = ln?.xs || [];
+      if (!xs.length) continue;
 
-    ctx.beginPath();
-    for (const xVal of xs) {
-      const px = xScale.getPixelForValue(xVal);
-      if (!Number.isFinite(px)) continue;
-      ctx.moveTo(px, chartArea.top);
-      ctx.lineTo(px, chartArea.bottom);
+      ctx.beginPath();
+      ctx.lineWidth = ln.lineWidth ?? 2;
+      ctx.setLineDash(ln.dash ?? [6, 6]);
+      ctx.strokeStyle = ln.color ?? "rgba(255,255,255,0.40)";
+
+      for (const t of xs) {
+        const px = x.getPixelForValue(t);
+        if (!Number.isFinite(px)) continue;
+        ctx.moveTo(px, chartArea.top);
+        ctx.lineTo(px, chartArea.bottom);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
     ctx.restore();
   }
 };
@@ -1677,17 +1845,13 @@ function desenharGrafico(item) {
 
   graficoAtual = new Chart(canvas.getContext("2d"), {
     type: "line",
-    plugins: [tpaLinesPlugin],
+    plugins: [eventLinesPlugin],
     data: { datasets },
     options: {
       responsive: true,
       plugins: {
-        tpaLines: {
-          enabled: getMostrarTPA(),
-          xs: obterTpaTimestamps(),
-          lineWidth: 2,
-          dash: [6, 6],
-          color: "rgba(255,255,255,0.45)"
+        eventLines: {
+          lines: montarLinhasEventos(item, pontos)
         },
         legend: { display: true }
       },
