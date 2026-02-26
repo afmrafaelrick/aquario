@@ -634,6 +634,21 @@ textarea{
   .hist-list{ max-height: 52vh; }
 }
 
+
+/* ----- Calendário (Histórico sem gráfico) ----- */
+.cal-wrap{ background: rgba(255,255,255,0.06); border-radius:16px; padding:12px; }
+.cal-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.cal-title{ font-weight:800; letter-spacing:0.2px; }
+.cal-nav{ display:flex; gap:8px; }
+.cal-btn{ padding:8px 10px; border:0; border-radius:12px; background: rgba(255,255,255,0.10); color:#fff; cursor:pointer; }
+.cal-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; }
+.cal-dow{ font-size:0.78rem; opacity:0.75; text-align:center; padding:4px 0; }
+.cal-cell{ position:relative; min-height:44px; border-radius:12px; background: rgba(0,0,0,0.18); display:flex; align-items:flex-start; justify-content:flex-start; padding:8px; }
+.cal-cell.muted{ opacity:0.35; }
+.cal-day{ font-weight:700; font-size:0.92rem; }
+.cal-mark{ position:absolute; right:8px; bottom:6px; font-size:0.78rem; padding:2px 7px; border-radius:999px; background: rgba(79,195,247,0.22); border:1px solid rgba(79,195,247,0.45); }
+.cal-legend{ margin-top:10px; font-size:0.9rem; opacity:0.85; }
+
 </style>
 </head>
 
@@ -675,6 +690,7 @@ textarea{
     <div class="hist-tabs" role="tablist" aria-label="Abas do histórico">
       <button class="tab-btn active" data-tab="registros" role="tab" aria-selected="true">Registros</button>
       <button class="tab-btn" data-tab="grafico" role="tab" aria-selected="false">Gráfico</button>
+      <button class="tab-btn" data-tab="calendario" role="tab" aria-selected="false" style="display:none;">Calendário</button>
       <button class="tab-btn" data-tab="insights" role="tab" aria-selected="false">Insights</button>
     </div>
 
@@ -688,6 +704,22 @@ textarea{
 
       <!-- TAB: GRÁFICO -->
       <div class="tab-panel" id="tab-grafico" role="tabpanel">
+      <div class="toggle-chips" style="margin:8px 0 10px;">
+        <label class="chip">
+          <input type="checkbox" id="chkUltimosDias">
+          <span>Últimos</span>
+        </label>
+        <label class="chip" style="gap:10px;">
+          <span style="opacity:0.9;">Período</span>
+          <select id="selUltimosDias" style="background:transparent; color:#fff; border:0; font-weight:700; outline:none;">
+            <option value="7">7d</option>
+            <option value="30">30d</option>
+            <option value="60">60d</option>
+            <option value="90">90d</option>
+          </select>
+        </label>
+      </div>
+
         <div id="eventChips" class="toggle-chips" style="margin:8px 0 10px;"></div>
         <div class="toggle-chips" style="margin:0 0 10px;">
           <label class="chip">
@@ -702,7 +734,24 @@ textarea{
         <canvas id="grafico" class="hist-chart"></canvas>
       </div>
 
-      <!-- TAB: INSIGHTS -->
+
+      <!-- TAB: CALENDÁRIO -->
+      <div class="tab-panel" id="tab-calendario" role="tabpanel">
+        <div class="cal-wrap">
+          <div class="cal-header">
+            <div class="cal-title" id="calTitle"></div>
+            <div class="cal-nav">
+              <button class="cal-btn" id="calPrev" type="button">◀</button>
+              <button class="cal-btn" id="calHoje" type="button">Hoje</button>
+              <button class="cal-btn" id="calNext" type="button">▶</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-legend muted" id="calLegend"></div>
+        </div>
+      </div>
+
+<!-- TAB: INSIGHTS -->
       <div class="tab-panel" id="tab-insights" role="tabpanel">
         <div id="histKpi" class="kpi-row"></div>
         <div class="muted" style="margin-top:10px; line-height:1.4;">
@@ -1077,21 +1126,41 @@ function setTabHistorico(tab) {
   if (tab === "grafico" && typeof atual === "string") {
     setTimeout(() => desenharGrafico(atual), 50);
   }
+
+  // Re-render do calendário quando entrar (para ficar sempre consistente)
+  if (tab === "calendario" && typeof atual === "string") {
+    setTimeout(() => renderCalendario(atual), 10);
+  }
 }
 
 function ajustarAbasHistorico(temGrafico){
   const btnGraf = document.querySelector('#historicoModal .tab-btn[data-tab="grafico"]');
+  const btnCal = document.querySelector('#historicoModal .tab-btn[data-tab="calendario"]');
   const btnIns = document.querySelector('#historicoModal .tab-btn[data-tab="insights"]');
+
   const pnlGraf = document.getElementById('tab-grafico');
-  const pnlIns = document.getElementById('tab-insights');
+  const pnlCal  = document.getElementById('tab-calendario');
+  const pnlIns  = document.getElementById('tab-insights');
 
-  const disp = temGrafico ? "" : "none";
-  if (btnGraf) btnGraf.style.display = disp;
-  if (btnIns) btnIns.style.display = disp;
-  if (pnlGraf) pnlGraf.style.display = disp;
-  if (pnlIns) pnlIns.style.display = disp;
+  if (temGrafico) {
+    // Mostra Gráfico/Insights; esconde Calendário
+    if (btnGraf) btnGraf.style.display = "";
+    if (btnIns)  btnIns.style.display  = "";
+    if (pnlGraf) pnlGraf.style.display = "";
+    if (pnlIns)  pnlIns.style.display  = "";
 
-  if (!temGrafico) {
+    if (btnCal) btnCal.style.display = "none";
+    if (pnlCal) pnlCal.style.display = "none";
+  } else {
+    // Mostra Calendário; esconde Gráfico/Insights
+    if (btnGraf) btnGraf.style.display = "none";
+    if (btnIns)  btnIns.style.display  = "none";
+    if (pnlGraf) pnlGraf.style.display = "none";
+    if (pnlIns)  pnlIns.style.display  = "none";
+
+    if (btnCal) btnCal.style.display = "";
+    if (pnlCal) pnlCal.style.display = "";
+
     setTabHistorico("registros");
   }
 }
@@ -1198,7 +1267,27 @@ function abrirHistorico() {
     const chkMA7 = document.getElementById('chkMA7');
     if (chkMA7) {
       chkMA7.checked = getMostrarMA7();
-      chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
+      chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); 
+    // Filtro: últimos X dias
+    const chkUlt = document.getElementById('chkUltimosDias');
+    const selUlt = document.getElementById('selUltimosDias');
+    if (chkUlt && selUlt) {
+      chkUlt.checked = getFiltroDiasAtivo();
+      selUlt.value = String(getFiltroDiasValor());
+      selUlt.disabled = !chkUlt.checked;
+
+      chkUlt.onchange = () => {
+        setFiltroDiasAtivo(chkUlt.checked);
+        selUlt.disabled = !chkUlt.checked;
+        desenharGrafico(atual);
+      };
+      selUlt.onchange = () => {
+        setFiltroDiasValor(parseInt(selUlt.value,10));
+        desenharGrafico(atual);
+      };
+    }
+
+    desenharGrafico(atual); };
     }
     const chkIdeal = document.getElementById('chkIdeal');
     if (chkIdeal) {
@@ -1207,6 +1296,8 @@ function abrirHistorico() {
     }
 
     desenharGrafico(atual);
+  } else {
+    renderCalendario(atual);
   }
 
   document.getElementById("historicoModal").style.display = "block";
@@ -1791,8 +1882,16 @@ function desenharGrafico(item) {
   const canvas = document.getElementById("grafico");
   if (!canvas) return;
 
-  const pontos = prepararDadosGrafico(item);
+  let pontos = prepararDadosGrafico(item);
   if (pontos.length === 0) return;
+
+  // Filtro: últimos X dias
+  if (getFiltroDiasAtivo()) {
+    const dias = getFiltroDiasValor();
+    const corte = Date.now() - dias * 24 * 60 * 60 * 1000;
+    const filtrado = pontos.filter(p => p.x >= corte);
+    pontos = (filtrado.length > 0) ? filtrado : [pontos[pontos.length - 1]];
+  }
 
   // KPIs
   atualizarKpisHistorico(item, pontos);
@@ -1880,6 +1979,134 @@ function normalizarHistorico(nome) {
   return hist;
 }
 
+
+
+// ------------------- CALENDÁRIO (itens sem gráfico) -------------------
+let _calYear = null;
+let _calMonth = null; // 0-11
+
+function getMonthNamePt(m){
+  const nomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  return nomes[m] || "";
+}
+
+function _extrairDatasMarcadas(item){
+  const hist = JSON.parse(localStorage.getItem(item) || "[]");
+  // mapa YYYY-MM-DD -> contagem
+  const mapa = {};
+  for (const r of hist){
+    if (!r?.data) continue;
+    const d = String(r.data).slice(0,10);
+    mapa[d] = (mapa[d] || 0) + 1;
+  }
+  return mapa;
+}
+
+function renderCalendario(item){
+  const pnl = document.getElementById("tab-calendario");
+  if (!pnl || pnl.style.display === "none") return;
+
+  const grid = document.getElementById("calGrid");
+  const title = document.getElementById("calTitle");
+  const legend = document.getElementById("calLegend");
+  if (!grid || !title) return;
+
+  const marcado = _extrairDatasMarcadas(item);
+
+  // init mês/ano se necessário
+  const hoje = new Date();
+  if (_calYear === null || _calMonth === null){
+    _calYear = hoje.getFullYear();
+    _calMonth = hoje.getMonth();
+  }
+
+  // Cabeçalho
+  title.textContent = `${getMonthNamePt(_calMonth)} ${_calYear}`;
+
+  // Monta grid
+  grid.innerHTML = "";
+
+  const dows = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  for (const d of dows){
+    const el = document.createElement("div");
+    el.className = "cal-dow";
+    el.textContent = d;
+    grid.appendChild(el);
+  }
+
+  const first = new Date(_calYear, _calMonth, 1);
+  const last  = new Date(_calYear, _calMonth + 1, 0);
+  const startDow = first.getDay(); // 0 dom
+  const daysInMonth = last.getDate();
+
+  // dias do mês anterior (para completar semana)
+  const prevLast = new Date(_calYear, _calMonth, 0).getDate();
+  for (let i=0;i<startDow;i++){
+    const dayNum = prevLast - startDow + 1 + i;
+    const cell = document.createElement("div");
+    cell.className = "cal-cell muted";
+    cell.innerHTML = `<div class="cal-day">${dayNum}</div>`;
+    grid.appendChild(cell);
+  }
+
+  // dias do mês atual
+  for (let day=1; day<=daysInMonth; day++){
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    const dateKey = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const count = marcado[dateKey] || 0;
+
+    cell.innerHTML = `<div class="cal-day">${day}</div>` + (count ? `<div class="cal-mark">${count}</div>` : "");
+    grid.appendChild(cell);
+  }
+
+  // completar com próximos dias até fechar a grade (múltiplo de 7 após o cabeçalho)
+  const totalCells = 7 + startDow + daysInMonth; // 7 dow headers
+  const remainder = totalCells % 7;
+  const fill = remainder === 0 ? 0 : 7 - remainder;
+  for (let i=1;i<=fill;i++){
+    const cell = document.createElement("div");
+    cell.className = "cal-cell muted";
+    cell.innerHTML = `<div class="cal-day">${i}</div>`;
+    grid.appendChild(cell);
+  }
+
+  const totalMarcados = Object.keys(marcado).length;
+  if (legend) {
+    legend.textContent = totalMarcados ? `Dias com registros: ${totalMarcados}. O número no canto indica quantos registros naquele dia.` : "Nenhum registro encontrado para este item.";
+  }
+
+  // listeners de navegação (idempotente)
+  const prevBtn = document.getElementById("calPrev");
+  const nextBtn = document.getElementById("calNext");
+  const hojeBtn = document.getElementById("calHoje");
+
+  if (prevBtn && !prevBtn._bound){
+    prevBtn._bound = true;
+    prevBtn.addEventListener("click", () => {
+      _calMonth -= 1;
+      if (_calMonth < 0){ _calMonth = 11; _calYear -= 1; }
+      renderCalendario(item);
+    });
+  }
+  if (nextBtn && !nextBtn._bound){
+    nextBtn._bound = true;
+    nextBtn.addEventListener("click", () => {
+      _calMonth += 1;
+      if (_calMonth > 11){ _calMonth = 0; _calYear += 1; }
+      renderCalendario(item);
+    });
+  }
+  if (hojeBtn && !hojeBtn._bound){
+    hojeBtn._bound = true;
+    hojeBtn.addEventListener("click", () => {
+      const h = new Date();
+      _calYear = h.getFullYear();
+      _calMonth = h.getMonth();
+      renderCalendario(item);
+    });
+  }
+}
 
 // Tabs do Histórico (delegação de evento)
 document.addEventListener("click", (e) => {
