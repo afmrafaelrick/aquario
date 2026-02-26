@@ -835,9 +835,9 @@ textarea{
 <script>
 // ------------------- ITENS -------------------
 const itens = [
-  "TPA","Densidade","KH","Fosfato","pH",
-  "Nitrito","Amônia","Perlon","Phosgard","Aquapure",
-  "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton"
+  "TPA","Perlon","Phosgard","Aquapure",
+  "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton","Densidade","KH","Fosfato","pH",
+  "Nitrito","Amônia"
 ];
 
 const icones = {
@@ -921,9 +921,10 @@ const ANALYTICS_CONFIG = {
   pH:        { grafico: true, eventos: ["TPA"] },
   Nitrito:   { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
   Amônia:    { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
-  Carbonate: { grafico: true, eventos: ["TPA"] },
+  
 
   // Itens sem gráfico (apenas registros)
+  Carbonate:    { grafico: false },
   TPA:          { grafico: false },
   Perlon:       { grafico: false },
   Phosgard:     { grafico: false },
@@ -2221,3 +2222,4 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
+
