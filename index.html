@@ -647,6 +647,11 @@ textarea{
 .cal-cell.muted{ opacity:0.35; }
 .cal-day{ font-weight:700; font-size:0.92rem; }
 .cal-mark{ position:absolute; right:8px; bottom:6px; font-size:0.78rem; padding:2px 7px; border-radius:999px; background: rgba(79,195,247,0.22); border:1px solid rgba(79,195,247,0.45); }
+.cal-mark.first{ opacity:0.6; }
+.cal-mark.good{ background: rgba(76,175,80,0.22); border-color: rgba(76,175,80,0.55); }
+.cal-mark.early{ background: rgba(255,235,59,0.22); border-color: rgba(255,235,59,0.60); }
+.cal-mark.late{ background: rgba(255,152,0,0.22); border-color: rgba(255,152,0,0.60); }
+.cal-mark.verylate{ background: rgba(244,67,54,0.18); border-color: rgba(244,67,54,0.60); }
 .cal-legend{ margin-top:10px; font-size:0.9rem; opacity:0.85; }
 
 </style>
@@ -2021,7 +2026,7 @@ function getMonthNamePt(m){
 
 function _extrairDatasMarcadas(item){
   const hist = JSON.parse(localStorage.getItem(item) || "[]");
-  // mapa YYYY-MM-DD -> contagem
+  // mapa YYYY-MM-DD -> contagem (normalmente 1; mantido por compatibilidade)
   const mapa = {};
   for (const r of hist){
     if (!r?.data) continue;
@@ -2029,6 +2034,51 @@ function _extrairDatasMarcadas(item){
     mapa[d] = (mapa[d] || 0) + 1;
   }
   return mapa;
+}
+
+// Para itens sem gráfico: mostra "dias desde a intervenção anterior" no calendário.
+// Retorna { badges: {YYYY-MM-DD: {text, cls}}, totalDiasMarcados, idealDias }
+function _extrairBadgesCalendario(item){
+  const hist = JSON.parse(localStorage.getItem(item) || "[]");
+  const datas = [];
+  for (const r of hist){
+    if (!r?.data) continue;
+    datas.push(String(r.data).slice(0,10));
+  }
+  // únicos + ordenados
+  const uniq = Array.from(new Set(datas)).sort(); // YYYY-MM-DD ordena lexicograficamente
+  const cfg = carregarConfig();
+  const ideal = Number(cfg?.[item]?.dias || 0);
+
+  function diffDays(a, b){
+    const da = new Date(a + "T00:00:00");
+    const db = new Date(b + "T00:00:00");
+    return Math.round((db - da) / 86400000);
+  }
+
+  function classificar(delta){
+    if (!ideal || ideal <= 0 || delta == null) return "";
+    if (delta === ideal) return "good";      // no prazo
+    if (delta < ideal) return "early";       // antes do prazo
+    // depois do prazo
+    if (delta <= ideal + 2) return "late";   // pouco atrasado
+    return "verylate";                       // bem atrasado
+  }
+
+  const badges = {};
+  let prev = null;
+  for (const d of uniq){
+    if (!prev){
+      badges[d] = { text: "•", cls: "first" }; // primeiro registro (sem intervalo anterior)
+      prev = d;
+      continue;
+    }
+    const delta = diffDays(prev, d);
+    badges[d] = { text: String(delta), cls: classificar(delta) };
+    prev = d;
+  }
+
+  return { badges, totalDiasMarcados: uniq.length, idealDias: ideal };
 }
 
 function renderCalendario(item){
@@ -2040,7 +2090,9 @@ function renderCalendario(item){
   const legend = document.getElementById("calLegend");
   if (!grid || !title) return;
 
-  const marcado = _extrairDatasMarcadas(item);
+  const infoCal = _extrairBadgesCalendario(item);
+
+  const badges = infoCal.badges || {};
 
   // init mês/ano se necessário
   const hoje = new Date();
@@ -2083,9 +2135,9 @@ function renderCalendario(item){
     const cell = document.createElement("div");
     cell.className = "cal-cell";
     const dateKey = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const count = marcado[dateKey] || 0;
+    const badge = badges[dateKey];
 
-    cell.innerHTML = `<div class="cal-day">${day}</div>` + (count ? `<div class="cal-mark">${count}</div>` : "");
+    cell.innerHTML = `<div class="cal-day">${day}</div>` + (badge ? `<div class="cal-mark ${badge.cls||""}">${badge.text}</div>` : "");
     grid.appendChild(cell);
   }
 
@@ -2100,9 +2152,14 @@ function renderCalendario(item){
     grid.appendChild(cell);
   }
 
-  const totalMarcados = Object.keys(marcado).length;
+  const totalMarcados = infoCal.totalDiasMarcados || 0;
   if (legend) {
-    legend.textContent = totalMarcados ? `Dias com registros: ${totalMarcados}. O número no canto indica quantos registros naquele dia.` : "Nenhum registro encontrado para este item.";
+    if (!totalMarcados) {
+      legend.textContent = "Nenhum registro encontrado para este item.";
+    } else {
+      const idealTxt = infoCal.idealDias ? ` | Intervalo ideal: ${infoCal.idealDias} dia(s)` : "";
+      legend.textContent = `Dias com registros: ${totalMarcados}. O número no canto indica quantos dias se passaram desde a intervenção anterior.${idealTxt}`;
+    }
   }
 
   // listeners de navegação (idempotente)
