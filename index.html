@@ -481,6 +481,159 @@ textarea{
 .badge.warn{ background: rgba(241, 196, 15, 0.18); }
 .badge.danger{ background: rgba(231, 76, 60, 0.18); }
 
+/* ===== Histórico (tabs + layout) ===== */
+.modal-content.modal-historico{
+  max-width: 900px;
+  width: min(920px, 96vw);
+}
+
+.hist-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.hist-tabs{
+  display:flex;
+  gap:8px;
+  padding:6px;
+  background: rgba(255,255,255,0.06);
+  border-radius:14px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.tab-btn{
+  flex:1;
+  border:0;
+  border-radius:12px;
+  padding:10px 12px;
+  background: transparent;
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  cursor:pointer;
+}
+
+.tab-btn.active{
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+}
+
+.hist-body{ margin-top: 10px; }
+
+.tab-panel{ display:none; }
+.tab-panel.active{ display:block; }
+
+.hist-list{
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.hist-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  margin:8px 0;
+  background: rgba(255,255,255,0.06);
+  border-radius:14px;
+}
+
+.hist-item .hist-left{
+  min-width: 0;
+}
+
+.hist-item .hist-date{
+  font-size: 0.92rem;
+  opacity: 0.9;
+}
+
+.hist-item .hist-value{
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.hist-item .hist-obs{
+  margin-top:4px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  word-break: break-word;
+}
+
+.hist-actions{
+  display:flex;
+  gap:8px;
+  flex-shrink:0;
+}
+
+.icon-btn{
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  cursor:pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.icon-btn:hover{
+  background: rgba(255,255,255,0.16);
+}
+
+.icon-btn.danger{
+  background: rgba(255, 70, 70, 0.18);
+}
+
+.icon-btn.danger:hover{
+  background: rgba(255, 70, 70, 0.28);
+}
+
+.toggle-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.chip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.06);
+  cursor:pointer;
+  user-select:none;
+}
+
+.chip input{
+  transform: scale(1.25);
+  accent-color: #4dd0e1;
+}
+
+.muted{
+  opacity: 0.82;
+}
+
+.full-width{ width:100%; }
+
+.hist-chart{
+  width:100%;
+  height: 260px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 520px){
+  .hist-chart{ height: 220px; }
+  .hist-list{ max-height: 52vh; }
+}
+
 </style>
 </head>
 
@@ -513,25 +666,54 @@ textarea{
 
 <!-- MODAL HISTÓRICO -->
 <div id="historicoModal" class="modal">
-  <div>
-    <h3 id="histTitulo"></h3>
-    <div id="listaHistorico"></div>
-    <div id="grafico-container" style="margin-top:20px;">
-      <div id="histKpi" class="kpi-row"></div>
-
-      <div class="toggle-row">
-      <input type="checkbox" id="chkTPA" style="transform: scale(1.6);">
-      <label for="chkTPA" style="cursor:pointer;">Adicionar TPA</label>
-      <span class="badge">+</span>
-      <input type="checkbox" id="chkMA7">
-      <label for="chkMA7" style="cursor:pointer;">Média 7 dias</label>
-      <input type="checkbox" id="chkIdeal">
-      <label for="chkIdeal" style="cursor:pointer;">Linha ideal</label>
-
+  <div class="modal-content modal-historico">
+    <div class="hist-header">
+      <h3 id="histTitulo" style="margin:0;"></h3>
+      <button class="icon-btn" onclick="fecharHistorico()" aria-label="Fechar">✕</button>
     </div>
-    <canvas id="grafico" style="height:220px; width:100%;"></canvas>
+
+    <div class="hist-tabs" role="tablist" aria-label="Abas do histórico">
+      <button class="tab-btn active" data-tab="registros" role="tab" aria-selected="true">Registros</button>
+      <button class="tab-btn" data-tab="grafico" role="tab" aria-selected="false">Gráfico</button>
+      <button class="tab-btn" data-tab="insights" role="tab" aria-selected="false">Insights</button>
     </div>
-    <button onclick="fecharHistorico()">Fechar</button>
+
+    <div class="hist-body">
+      <!-- TAB: REGISTROS -->
+      <div class="tab-panel active" id="tab-registros" role="tabpanel">
+        <div id="histResumoRegistros" class="muted" style="margin:6px 2px 10px;"></div>
+        <div id="listaHistorico" class="hist-list"></div>
+        <button id="btnMaisHist" class="secundario full-width" style="display:none; margin-top:10px;">Carregar mais</button>
+      </div>
+
+      <!-- TAB: GRÁFICO -->
+      <div class="tab-panel" id="tab-grafico" role="tabpanel">
+        <div class="toggle-chips" style="margin:8px 0 10px;">
+          <label class="chip">
+            <input type="checkbox" id="chkTPA">
+            <span>Adicionar TPA</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" id="chkMA7">
+            <span>Média 7 dias</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" id="chkIdeal">
+            <span>Linha ideal</span>
+          </label>
+        </div>
+        <canvas id="grafico" class="hist-chart"></canvas>
+      </div>
+
+      <!-- TAB: INSIGHTS -->
+      <div class="tab-panel" id="tab-insights" role="tabpanel">
+        <div id="histKpi" class="kpi-row"></div>
+        <div class="muted" style="margin-top:10px; line-height:1.4;">
+          Dica: use as linhas de TPA para entender se o parâmetro melhora (ou piora) após as trocas de água.
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -790,53 +972,105 @@ function salvar() {
 }
 
 // ------------------- HISTÓRICO -------------------
+let _histCache = [];
+let _histMostrando = 0;
+const HIST_PAGE_SIZE = 30;
+
+function setTabHistorico(tab) {
+  const btns = document.querySelectorAll("#historicoModal .tab-btn");
+  const panels = document.querySelectorAll("#historicoModal .tab-panel");
+  btns.forEach(b => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  panels.forEach(p => p.classList.toggle("active", p.id === "tab-" + tab));
+
+  // Redesenha quando entrar no gráfico (canvas em tabs às vezes calcula tamanho errado)
+  if (tab === "grafico" && typeof atual === "string") {
+    setTimeout(() => desenharGrafico(atual), 50);
+  }
+}
+
+function renderHistoricoLista() {
+  const lista = document.getElementById("listaHistorico");
+  const resumo = document.getElementById("histResumoRegistros");
+  const btnMais = document.getElementById("btnMaisHist");
+
+  const total = _histCache.length;
+  const mostrar = Math.min(_histMostrando, total);
+
+  lista.innerHTML = "";
+  for (let i = 0; i < mostrar; i++) {
+    const item = _histCache[i];
+
+    const dataTxt = item.data || "";
+    const valorTxt = (item.valor !== undefined && item.valor !== null) ? item.valor : "";
+    const obsTxt = (item.obs || "").trim();
+
+    lista.innerHTML += `
+      <div class="hist-item">
+        <div class="hist-left">
+          <div class="hist-date">${dataTxt}</div>
+          <div class="hist-value">${valorTxt}</div>
+          ${obsTxt ? `<div class="hist-obs">${obsTxt}</div>` : ``}
+        </div>
+        <div class="hist-actions">
+          <button class="icon-btn" onclick="editarMedicao('${item.id}')" aria-label="Editar">✏️</button>
+          <button class="icon-btn danger" onclick="pedirExclusao('${atual}','${item.id}')" aria-label="Excluir">🗑️</button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (resumo) resumo.innerText = `Mostrando ${mostrar} de ${total} registro(s).`;
+
+  if (btnMais) {
+    const temMais = mostrar < total;
+    btnMais.style.display = temMais ? "block" : "none";
+    btnMais.onclick = () => {
+      _histMostrando = Math.min(_histMostrando + HIST_PAGE_SIZE, total);
+      renderHistoricoLista();
+    };
+  }
+}
+
 function abrirHistorico() {
   if (!atual) return;
 
   fecharTodosModais();
 
   document.getElementById("histTitulo").innerText = atual;
-  const lista = document.getElementById("listaHistorico");
-  lista.innerHTML = "";
 
   // 🔑 SEMPRE normaliza antes
   const hist = normalizarHistorico(atual).slice().reverse();
 
-  hist.forEach(item => {
-    lista.innerHTML += `
-      <div class="hist-item">
-        <div>
-          <strong>${item.data}</strong> — ${item.valor}<br>
-          ${item.obs || ""}
-        </div>
-        <div>
-          <button onclick="editarMedicao('${item.id}')">✏️</button>
-          <button class="btn-delete" onclick="pedirExclusao('${atual}','${item.id}')">🗑️</button>
-        </div>
-      </div>
-    `;
-  });
+  _histCache = hist;           // já está do mais novo pro mais antigo
+  _histMostrando = Math.min(HIST_PAGE_SIZE, _histCache.length);
+  renderHistoricoLista();
 
+  // Tabs: sempre começa em Registros
+  setTabHistorico("registros");
 
+  // Toggles do gráfico
+  const chkTPA = document.getElementById("chkTPA");
+  if (chkTPA) {
+    chkTPA.checked = getMostrarTPA();
+    chkTPA.onchange = () => { setMostrarTPA(chkTPA.checked); desenharGrafico(atual); };
+  }
+  const chkMA7 = document.getElementById("chkMA7");
+  if (chkMA7) {
+    chkMA7.checked = getMostrarMA7();
+    chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
+  }
+  const chkIdeal = document.getElementById("chkIdeal");
+  if (chkIdeal) {
+    chkIdeal.checked = getMostrarIdeal();
+    chkIdeal.onchange = () => { setMostrarIdeal(chkIdeal.checked); desenharGrafico(atual); };
+  }
 
-// Toggles do gráfico
-const chkTPA = document.getElementById("chkTPA");
-if (chkTPA) {
-  chkTPA.checked = getMostrarTPA();
-  chkTPA.onchange = () => { setMostrarTPA(chkTPA.checked); desenharGrafico(atual); };
-}
-const chkMA7 = document.getElementById("chkMA7");
-if (chkMA7) {
-  chkMA7.checked = getMostrarMA7();
-  chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); desenharGrafico(atual); };
-}
-const chkIdeal = document.getElementById("chkIdeal");
-if (chkIdeal) {
-  chkIdeal.checked = getMostrarIdeal();
-  chkIdeal.onchange = () => { setMostrarIdeal(chkIdeal.checked); desenharGrafico(atual); };
-}
-
-desenharGrafico(atual);
+  // Já calcula KPIs, mesmo que o usuário não vá na aba Insights agora
+  desenharGrafico(atual);
 
   document.getElementById("historicoModal").style.display = "block";
 }
@@ -1482,6 +1716,13 @@ function normalizarHistorico(nome) {
   return hist;
 }
 
+
+// Tabs do Histórico (delegação de evento)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#historicoModal .tab-btn");
+  if (!btn) return;
+  setTabHistorico(btn.dataset.tab);
+});
 
 // ------------------- INIT -------------------
 carregar();
