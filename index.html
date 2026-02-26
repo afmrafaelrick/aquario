@@ -1263,11 +1263,16 @@ function abrirHistorico() {
     const chipIdeal = document.getElementById('chipIdeal');
     if (chipIdeal) chipIdeal.style.display = (typeof ideal === 'number' && Number.isFinite(ideal)) ? '' : 'none';
 
-    // Inicializa toggles MA7/Ideal
+    // Inicializa toggles do gráfico (Média 7d / Ideal / Filtro últimos X dias)
     const chkMA7 = document.getElementById('chkMA7');
     if (chkMA7) {
       chkMA7.checked = getMostrarMA7();
-      chkMA7.onchange = () => { setMostrarMA7(chkMA7.checked); 
+      chkMA7.onchange = () => {
+        setMostrarMA7(chkMA7.checked);
+        desenharGrafico(atual);
+      };
+    }
+
     // Filtro: últimos X dias
     const chkUlt = document.getElementById('chkUltimosDias');
     const selUlt = document.getElementById('selUltimosDias');
@@ -1282,12 +1287,9 @@ function abrirHistorico() {
         desenharGrafico(atual);
       };
       selUlt.onchange = () => {
-        setFiltroDiasValor(parseInt(selUlt.value,10));
+        setFiltroDiasValor(parseInt(selUlt.value, 10));
         desenharGrafico(atual);
       };
-    }
-
-    desenharGrafico(atual); };
     }
     const chkIdeal = document.getElementById('chkIdeal');
     if (chkIdeal) {
