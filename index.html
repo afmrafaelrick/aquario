@@ -1633,6 +1633,25 @@ function setMostrarMA7(v){ localStorage.setItem("mostrarMA7", v ? "1":"0"); }
 function getMostrarIdeal(){ return localStorage.getItem("mostrarIdeal")==="1"; }
 function setMostrarIdeal(v){ localStorage.setItem("mostrarIdeal", v ? "1":"0"); }
 
+
+// Filtro "últimos X dias" (persistido)
+function getFiltroDiasAtivo() {
+  return localStorage.getItem("filtroDiasAtivo") === "1";
+}
+function setFiltroDiasAtivo(v) {
+  localStorage.setItem("filtroDiasAtivo", v ? "1" : "0");
+}
+function getFiltroDiasValor() {
+  const raw = localStorage.getItem("filtroDiasValor") || "30";
+  const n = parseInt(raw, 10);
+  return [7, 30, 60, 90].includes(n) ? n : 30;
+}
+function setFiltroDiasValor(v) {
+  const n = parseInt(String(v), 10);
+  localStorage.setItem("filtroDiasValor", [7, 30, 60, 90].includes(n) ? String(n) : "30");
+}
+
+
 // Util numérica
 function isNumero(v){ return typeof v === "number" && Number.isFinite(v); }
 function round(v, casas=2){
