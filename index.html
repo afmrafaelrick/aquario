@@ -883,13 +883,21 @@ const configPadrao = {
 };
 
 function carregarConfig(){
-  let cfgSalvo = JSON.parse(localStorage.getItem("config")) || {};
-  let cfgFinal = {};
+  // Config pode corromper (ex.: edição manual no storage). Não deixe isso quebrar o app.
+  let cfgSalvo = {};
+  try {
+    const raw = localStorage.getItem("config");
+    cfgSalvo = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn("Config inválida no localStorage (chave 'config'). Resetando.", e);
+    cfgSalvo = {};
+  }
 
+  const cfgFinal = {};
   itens.forEach(nome => {
     cfgFinal[nome] = {
-      dias: cfgSalvo[nome]?.dias ?? configPadrao[nome].dias,
-      ideal: cfgSalvo[nome]?.ideal ?? configPadrao[nome].ideal
+      dias: cfgSalvo?.[nome]?.dias ?? configPadrao[nome].dias,
+      ideal: cfgSalvo?.[nome]?.ideal ?? configPadrao[nome].ideal
     };
   });
 
