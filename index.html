@@ -868,6 +868,27 @@ input::placeholder, textarea::placeholder{ color: rgba(255,255,255,.45) !importa
   border: 1px solid rgba(255,255,255,.06) !important;
   border-radius: 14px !important;
 }
+
+/* ---- Cards Manage (V1) ---- */
+.modal-box.wide{max-width: 980px;}
+.cards-manage-list{display:flex;flex-direction:column;gap:10px;margin:12px 0;max-height:60vh;overflow:auto;padding-right:6px;}
+.cards-manage-row{display:flex;gap:10px;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:10px;}
+.cm-left{display:flex;gap:10px;align-items:center;flex:1;min-width:0;}
+.cm-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.cm-ico{width:56px;text-align:center;font-size:20px;}
+.cm-name{flex:1;min-width:120px;}
+.cm-key{font-size:12px;opacity:.6;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cm-num{width:140px;max-width:42vw;}
+.btn.small{padding:8px 10px;font-size:14px;border-radius:12px;}
+.btn.small.ghost{opacity:.75;}
+@media (max-width: 600px){
+  .modal-box.wide{max-width: 96vw;}
+  .cards-manage-row{flex-direction:column;align-items:stretch;}
+  .cm-right{justify-content:flex-start;}
+  .cm-num{width:100%;max-width:none;}
+  .cm-key{max-width:none;}
+}
+
 </style>
 </head>
 
@@ -882,8 +903,30 @@ input::placeholder, textarea::placeholder{ color: rgba(255,255,255,.45) !importa
 <button onclick="abrirConfig()">⚙️ Configurações</button>
 
 <button onclick="abrirAnalytics()">📊 Analytics</button>
+<button onclick="abrirGerenciarCards()">🧩 Cards</button>
 
 <div id="cards"></div>
+
+<!-- MODAL GERENCIAR CARDS -->
+<div id="modalCards" class="modal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3>Gerenciar Cards</h3>
+      <button class="btn-ghost" onclick="fecharModalCards()">✕</button>
+    </div>
+
+    <div class="help">
+      <small>Reordene (↑/↓), oculte/mostre, edite nome/ícone e ajuste Ideal/Intervalo. Ocultar não apaga o histórico.</small>
+    </div>
+
+    <div id="listaCardsManage" class="cards-manage-list"></div>
+
+    <div class="row">
+      <button class="btn" onclick="adicionarNovoCard()">➕ Adicionar card</button>
+      <button class="btn primary" onclick="salvarCardsManage()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL MEDIÇÃO -->
 <div id="modal" class="modal">
@@ -1048,7 +1091,7 @@ input::placeholder, textarea::placeholder{ color: rgba(255,255,255,.45) !importa
 
 <script>
 // ------------------- ITENS -------------------
-const itens = [
+let itens = [
   "TPA","Densidade","KH","Fosfato","pH",
   "Nitrito","Amônia","Perlon","Phosgard","Aquapure",
   "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton"
@@ -1072,6 +1115,229 @@ const icones = {
   ZooPlancton: "🦐",
   PhytoPlancton: "🧬"
 };
+// ------------------- CARDS EDITÁVEIS (V1) -------------------
+// Mantém compatibilidade: históricos continuam em localStorage por chave (ex: "KH", "TPA").
+// "cardsConfig" guarda apenas metadados (ordem/ativo/label/icone) e parâmetros (ideal/dias).
+
+const CARDS_DEFAULT = itens.map((k, i) => ({
+  key: k,
+  label: k,
+  icon: icones[k] || "🧩",
+  ordem: i + 1,
+  ativo: true
+}));
+
+function loadCardsConfig(){
+  let cfg = null;
+  try {
+    cfg = JSON.parse(localStorage.getItem("cardsConfig") || "null");
+  } catch (e) {
+    console.warn("cardsConfig inválido. Resetando.", e);
+    cfg = null;
+  }
+  if (!Array.isArray(cfg)) {
+    // primeira vez
+    localStorage.setItem("cardsConfig", JSON.stringify(CARDS_DEFAULT));
+    cfg = CARDS_DEFAULT.slice();
+  }
+
+  // migrar: garantir que todos os defaults existam
+  const byKey = new Map(cfg.map(c => [c.key, c]));
+  CARDS_DEFAULT.forEach(d => {
+    if (!byKey.has(d.key)) cfg.push(d);
+  });
+
+  // normalizar campos
+  cfg.forEach((c, idx) => {
+    c.key = String(c.key || "").trim() || ("Card" + idx);
+    c.label = (c.label ?? c.key).toString();
+    c.icon = (c.icon ?? icones[c.key] ?? "🧩").toString();
+    c.ordem = Number.isFinite(+c.ordem) ? +c.ordem : (idx + 1);
+    c.ativo = (c.ativo !== false);
+    // manter ideal/dias dentro do cardsConfig para novos cards
+    if (c.ideal === undefined) c.ideal = null;
+    if (c.dias === undefined) c.dias = null;
+    if (!c.tipo) c.tipo = null; // opcional
+  });
+
+  localStorage.setItem("cardsConfig", JSON.stringify(cfg));
+
+  // manter a lista global 'itens' sincronizada (inclui ocultos, para config/histórico não quebrar)
+  itens = cfg.map(c => c.key);
+
+  // garantir configPadrao para novos cards (sem quebrar carregarConfig)
+  cfg.forEach(c => {
+    if (!configPadrao[c.key]) {
+      configPadrao[c.key] = { dias: c.dias ?? null, ideal: c.ideal ?? null };
+    }
+  });
+
+  // garantir que 'config' inclua os novos cards (sem apagar o dos usuários)
+  try {
+    const raw = localStorage.getItem("config");
+    const saved = raw ? JSON.parse(raw) : {};
+    let changed = false;
+    cfg.forEach(c => {
+      if (!saved[c.key]) {
+        saved[c.key] = {
+          dias: (c.dias ?? configPadrao[c.key]?.dias ?? null),
+          ideal: (c.ideal ?? configPadrao[c.key]?.ideal ?? null)
+        };
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem("config", JSON.stringify(saved));
+  } catch (e) {
+    // deixa carregarConfig lidar com isso
+  }
+
+  return cfg;
+}
+
+function saveCardsConfig(cfg){
+  localStorage.setItem("cardsConfig", JSON.stringify(cfg));
+  // ressincroniza itens e defaults
+  loadCardsConfig();
+}
+
+function getCardMeta(key){
+  const cfg = loadCardsConfig();
+  const c = cfg.find(x => x.key === key);
+  return c || { key, label: key, icon: icones[key] || "🧩", ativo: true, ordem: 999, ideal: null, dias: null };
+}
+
+function getCardsAtivosOrdenados(){
+  const cfg = loadCardsConfig();
+  return cfg.filter(c => c.ativo).sort((a,b)=>a.ordem-b.ordem);
+}
+
+// ------------------- UI: GERENCIAR CARDS -------------------
+let _cardsDraft = null;
+
+function abrirGerenciarCards(){
+  fecharTodosModais();
+  const modal = document.getElementById("modalCards");
+  modal.style.display = "flex";
+  _cardsDraft = loadCardsConfig().slice().sort((a,b)=>a.ordem-b.ordem);
+  renderListaCardsManage();
+}
+
+function fecharModalCards(){
+  document.getElementById("modalCards").style.display = "none";
+  _cardsDraft = null;
+}
+
+function renderListaCardsManage(){
+  const el = document.getElementById("listaCardsManage");
+  if (!el) return;
+  el.innerHTML = "";
+  (_cardsDraft || []).sort((a,b)=>a.ordem-b.ordem).forEach((c, idx) => {
+    const row = document.createElement("div");
+    row.className = "cards-manage-row";
+    row.innerHTML = `
+      <div class="cm-left">
+        <input class="cm-ico" maxlength="3" value="${escapeHtml(c.icon || "🧩")}" title="Ícone (emoji)" />
+        <input class="cm-name" value="${escapeHtml(c.label || c.key)}" title="Nome do card" />
+        <span class="cm-key" title="Chave interna (histórico)">${escapeHtml(c.key)}</span>
+      </div>
+
+      <div class="cm-right">
+        <input class="cm-num" type="number" step="any" placeholder="Ideal" value="${c.ideal ?? ""}" title="Valor ideal (opcional)" />
+        <input class="cm-num" type="number" step="1" placeholder="Intervalo (dias)" value="${c.dias ?? ""}" title="Intervalo ideal em dias (opcional)" />
+        <button class="btn small" title="Subir" data-act="up">↑</button>
+        <button class="btn small" title="Descer" data-act="down">↓</button>
+        <button class="btn small ${c.ativo? '' : 'ghost'}" title="${c.ativo?'Ocultar':'Mostrar'}" data-act="toggle">${c.ativo?'Ocultar':'Mostrar'}</button>
+      </div>
+    `;
+
+    // handlers
+    const [inpIco, inpName] = row.querySelectorAll("input.cm-ico, input.cm-name");
+    const nums = row.querySelectorAll("input.cm-num");
+    inpIco.addEventListener("input", e => { c.icon = e.target.value; });
+    inpName.addEventListener("input", e => { c.label = e.target.value; });
+
+    nums[0].addEventListener("input", e => { c.ideal = e.target.value === "" ? null : Number(e.target.value); });
+    nums[1].addEventListener("input", e => { c.dias = e.target.value === "" ? null : Number(e.target.value); });
+
+    row.querySelectorAll("button[data-act]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const act = btn.getAttribute("data-act");
+        if (act === "toggle") c.ativo = !c.ativo;
+        if (act === "up") swapOrder(idx, idx-1);
+        if (act === "down") swapOrder(idx, idx+1);
+        renderListaCardsManage();
+      });
+    });
+
+    el.appendChild(row);
+  });
+}
+
+function swapOrder(i, j){
+  if (!_cardsDraft) return;
+  const arr = _cardsDraft.sort((a,b)=>a.ordem-b.ordem);
+  if (j < 0 || j >= arr.length) return;
+  const a = arr[i], b = arr[j];
+  const tmp = a.ordem;
+  a.ordem = b.ordem;
+  b.ordem = tmp;
+}
+
+function adicionarNovoCard(){
+  if (!_cardsDraft) _cardsDraft = loadCardsConfig().slice();
+  const base = "Novo";
+  let key = base;
+  let n = 1;
+  const keys = new Set(_cardsDraft.map(x=>x.key));
+  while (keys.has(key)) { n++; key = base + n; }
+  const ordemMax = Math.max(0, ..._cardsDraft.map(x=>+x.ordem||0));
+  _cardsDraft.push({
+    key,
+    label: key,
+    icon: "🧩",
+    ordem: ordemMax + 1,
+    ativo: true,
+    ideal: null,
+    dias: null,
+    tipo: null
+  });
+  renderListaCardsManage();
+}
+
+function salvarCardsManage(){
+  if (!_cardsDraft) { fecharModalCards(); return; }
+
+  // salvar cardsConfig
+  saveCardsConfig(_cardsDraft);
+
+  // aplicar ideal/dias no config (compatibilidade com o resto do app)
+  let cfgSaved = {};
+  try {
+    cfgSaved = JSON.parse(localStorage.getItem("config")||"{}");
+  } catch(e) { cfgSaved = {}; }
+
+  _cardsDraft.forEach(c=>{
+    if (!cfgSaved[c.key]) cfgSaved[c.key] = { dias: null, ideal: null };
+    if (c.dias !== undefined) cfgSaved[c.key].dias = c.dias;
+    if (c.ideal !== undefined) cfgSaved[c.key].ideal = c.ideal;
+    if (!configPadrao[c.key]) configPadrao[c.key] = { dias: c.dias ?? null, ideal: c.ideal ?? null };
+  });
+
+  localStorage.setItem("config", JSON.stringify(cfgSaved));
+
+  fecharModalCards();
+  carregar(); // redesenha cards na tela inicial
+}
+
+// util
+function escapeHtml(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+
 
 const statusIcone = {
   ok: "OK",
@@ -1102,6 +1368,7 @@ const configPadrao = {
 };
 
 function carregarConfig(){
+  loadCardsConfig();
   // Config pode corromper (ex.: edição manual no storage). Não deixe isso quebrar o app.
   let cfgSalvo = {};
   try {
@@ -1251,10 +1518,15 @@ function classeAlerta(diasStr, limite){
 // ------------------- TELA PRINCIPAL -------------------
 function carregar(){
   const cards = document.getElementById("cards");
+  loadCardsConfig();
   const cfg = carregarConfig();
   cards.innerHTML = "";
 
-  itens.forEach(nome=>{
+  getCardsAtivosOrdenados().forEach(card=>{
+    const nome = card.key;
+    const label = card.label || nome;
+    const icon = card.icon || icones[nome] || "🐠";
+
     const hist = JSON.parse(localStorage.getItem(nome)||"[]");
     const temHistorico = hist.length > 0;
     const ultimaData = obterUltimaData(hist);
@@ -1273,8 +1545,8 @@ function carregar(){
     div.className = "card "+classe;
     div.innerHTML = `
       <div class="card-header">
-        <div class="card-icon">${icones[nome] || "🐠"}</div>
-        <div class="card-title">${nome}</div>
+        <div class="card-icon">${icon}</div>
+        <div class="card-title">${label}</div>
       </div>
 
       <div class="card-days">
@@ -1313,7 +1585,7 @@ function abrir(nome){
   fecharTodosModais();   // ← ADICIONAR
   atual = nome;
   indiceEdicao = null;
-  document.getElementById("titulo").innerText = nome;
+  document.getElementById("titulo").innerText = (getCardMeta(nome).label || nome);
   const hoje = new Date().toISOString().split("T")[0];
   document.getElementById("data").value = hoje;
   // Prefill: se houver valor ideal configurado, já sugerir esse valor
@@ -1485,7 +1757,7 @@ function abrirHistorico() {
 
   fecharTodosModais();
 
-  document.getElementById("histTitulo").innerText = atual;
+  document.getElementById("histTitulo").innerText = (getCardMeta(atual).label || atual);
 
   // 🔑 SEMPRE normaliza antes
   const hist = normalizarHistorico(atual).slice().reverse();
