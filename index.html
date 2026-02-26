@@ -654,6 +654,99 @@ textarea{
 .cal-mark.verylate{ background: rgba(244,67,54,0.18); border-color: rgba(244,67,54,0.60); }
 .cal-legend{ margin-top:10px; font-size:0.9rem; opacity:0.85; }
 
+
+/* ===== index_style_option1_polish overrides ===== */
+:root{
+  --radius: 16px;
+}
+html, body{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Layout geral */
+body{
+  line-height: 1.25;
+}
+
+/* Cards: mais “clean” */
+.card{
+  border-radius: var(--radius) !important;
+  padding: 14px !important;
+  box-shadow: 0 6px 16px rgba(0,0,0,.28) !important;
+}
+.card:hover{ transform: translateY(-2px) !important; box-shadow: 0 10px 22px rgba(0,0,0,.34) !important; }
+.card.ok, .card.alerta, .card.critico, .card.neutro{
+  border-left-width: 4px !important;
+}
+
+/* Hierarquia de texto dentro do card */
+.card-icon{ font-size: 30px !important; }
+.card-title{ font-size: 16px !important; font-weight: 700 !important; letter-spacing: .2px; }
+.card-days{ font-size: 34px !important; margin-top: 6px !important; }
+.card-days span{ font-size: 14px !important; opacity: .75 !important; }
+.card-ideal{ font-size: 12px !important; opacity: .70 !important; }
+
+/* Modal: menos “inflado” */
+.modal > div{
+  padding: 18px !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.45) !important;
+}
+
+/* Inputs: tamanho profissional */
+input, textarea, select{
+  font-size: 16px !important;
+  padding: 12px 12px !important;
+  border-radius: 12px !important;
+}
+textarea{ min-height: 92px; }
+
+/* Botões */
+button, .btn{
+  font-size: 14px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+}
+button.secundario{
+  opacity: .92;
+}
+
+/* Ícones Editar/Excluir e ações do histórico */
+.icon-btn{
+  width: 34px !important;
+  height: 34px !important;
+  font-size: 16px !important;
+  border-radius: 10px !important;
+}
+
+/* Tabs do histórico: mais “app-like” */
+.tabs .tab{
+  font-size: 13px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+}
+.tabs .tab.active{
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18) !important;
+}
+
+/* Chips/toggles: alinhamento e toques melhores */
+.chip, .toggle-chip, .evt-chip{
+  font-size: 12px !important;
+  padding: 8px 10px !important;
+  border-radius: 999px !important;
+}
+
+/* Calendário: números mais legíveis sem gritar */
+.cal-day{
+  border-radius: 12px !important;
+}
+.cal-day .badge{
+  font-size: 12px !important;
+  min-width: 24px !important;
+  height: 20px !important;
+}
 </style>
 </head>
 
@@ -835,9 +928,9 @@ textarea{
 <script>
 // ------------------- ITENS -------------------
 const itens = [
-  "TPA","Perlon","Phosgard","Aquapure",
-  "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton","Densidade","KH","Fosfato","pH",
-  "Nitrito","Amônia"
+  "TPA","Densidade","KH","Fosfato","pH",
+  "Nitrito","Amônia","Perlon","Phosgard","Aquapure",
+  "Fuel","Carbonate","BioActive","Stability","ZooPlancton","PhytoPlancton"
 ];
 
 const icones = {
@@ -921,10 +1014,9 @@ const ANALYTICS_CONFIG = {
   pH:        { grafico: true, eventos: ["TPA"] },
   Nitrito:   { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
   Amônia:    { grafico: true, eventos: ["TPA", "Bacterias", "Perlon"] },
-  
+  Carbonate: { grafico: true, eventos: ["TPA"] },
 
   // Itens sem gráfico (apenas registros)
-  Carbonate:    { grafico: false },
   TPA:          { grafico: false },
   Perlon:       { grafico: false },
   Phosgard:     { grafico: false },
@@ -2222,4 +2314,3 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
-
