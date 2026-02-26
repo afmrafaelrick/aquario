@@ -15,7 +15,8 @@
 body {
   background:#002b3d;
   color:white;
-  font-family:Arial, sans-serif;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 20px;
   padding:0px;
   margin: 0;
   overflow-x: hidden;
@@ -43,12 +44,12 @@ h2 {
   
 button {
   background: linear-gradient(145deg, #1fa2d6, #137aa6);
-  border: none;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
   padding: 10px 14px;
   color: white;
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
@@ -65,9 +66,34 @@ button:active {
 }
 
 button.secundario {
-  background: linear-gradient(145deg, #5f6f7a, #3e4c55);
-  font-weight: normal;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.86);
+  font-weight: 650;
 }
+
+.btn-secondary{
+  background: transparent;
+  border: 1px solid rgba(77,208,225,0.50);
+  color: rgba(220,250,255,0.95);
+}
+.btn-secondary:hover{
+  background: rgba(77,208,225,0.10);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+}
+
+.btn-primary{
+  background: linear-gradient(145deg, #1fa2d6, #137aa6);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+}
+.btn-danger{
+  background: rgba(255,107,107,0.20);
+  border: 1px solid rgba(255,107,107,0.40);
+  color: rgba(255,235,235,0.98);
+  box-shadow: 0 0 0 rgba(0,0,0,0), 0 0 18px rgba(255,107,107,0.30);
+}
+
 
 
 @keyframes fadeUp {
@@ -128,10 +154,10 @@ button.secundario {
 }
 
 /* Cores de status */
-.card.ok       { border-left: 6px solid #3bd671; }
-.card.alerta   { border-left: 6px solid #f1c40f; }
-.card.critico  { border-left: 6px solid #ff6b6b; }
-.card.neutro   { border-left: 6px solid #7f8c8d; }
+.card.ok       { border-left: 8px solid rgba(59,214,113,0.75); }
+.card.alerta   { border-left: 8px solid rgba(241,196,15,0.75); }
+.card.critico  { border-left: 8px solid rgba(255,107,107,0.78); }
+.card.neutro   { border-left: 8px solid rgba(127,140,141,0.70); }
 
 
 
@@ -142,13 +168,58 @@ button.secundario {
   gap: 10px;
 }
 
-.card-status {
-
-  top: 8px;
-  right: 10px;
-  font-size: 28px;
-  opacity: 0.9;
+.card-status{
+  position:absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.95;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
+
+.card.ok .card-status{
+  background: rgba(59,214,113,0.28);
+  border: 1px solid rgba(59,214,113,0.35);
+  color: rgba(230,255,240,0.95);
+}
+.card.alerta .card-status{
+  background: rgba(241,196,15,0.28);
+  border: 1px solid rgba(241,196,15,0.35);
+  color: rgba(255,250,210,0.95);
+}
+.card.critico .card-status{
+  background: rgba(255,107,107,0.30);
+  border: 1px solid rgba(255,107,107,0.35);
+  color: rgba(255,235,235,0.98);
+  box-shadow: 0 0 0 rgba(0,0,0,0), 0 0 18px rgba(255,107,107,0.30);
+}
+.card.neutro .card-status{
+  background: rgba(127,140,141,0.26);
+  border: 1px solid rgba(127,140,141,0.30);
+  color: rgba(240,245,245,0.92);
+}
+
+/* "tinta" suave para enxergar prioridade sem moldura neon */
+.card.ok::after,
+.card.alerta::after,
+.card.critico::after,
+.card.neutro::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0.9;
+}
+.card.ok::after{ background: linear-gradient(90deg, rgba(59,214,113,0.12), transparent 60%); }
+.card.alerta::after{ background: linear-gradient(90deg, rgba(241,196,15,0.12), transparent 60%); }
+.card.critico::after{ background: linear-gradient(90deg, rgba(255,107,107,0.12), transparent 60%); }
+.card.neutro::after{ background: linear-gradient(90deg, rgba(127,140,141,0.10), transparent 60%); }
 
 
 .card-icon {
@@ -424,11 +495,11 @@ textarea{
   padding: 10px 12px;
 }
 .kpi .kpi-label{
-  font-size: 12px;
+  font-size: 14px;
   opacity: .85;
 }
 .kpi .kpi-value{
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   margin-top: 4px;
 }
@@ -457,7 +528,7 @@ textarea{
 }
 .analytics-card h4{
   margin: 0 0 8px 0;
-  font-size: 16px;
+  font-size: 20px;
 }
 .analytics-table{
   width:100%;
@@ -474,7 +545,7 @@ textarea{
   display:inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
   border:1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.06);
 }
@@ -510,10 +581,11 @@ textarea{
   flex:1;
   border:0;
   border-radius:12px;
-  padding:10px 12px;
+  padding:12px 12px;
   background: transparent;
-  color: rgba(255,255,255,0.85);
-  font-weight: 600;
+  color: rgba(255,255,255,0.88);
+  font-weight: 700;
+  font-size: 20px;
   cursor:pointer;
 }
 
@@ -539,7 +611,7 @@ textarea{
   justify-content:space-between;
   align-items:center;
   gap:12px;
-  padding:10px 12px;
+  padding:12px 14px;
   margin:8px 0;
   background: rgba(255,255,255,0.06);
   border-radius:14px;
@@ -579,7 +651,7 @@ textarea{
   background: rgba(255,255,255,0.10);
   color: #fff;
   cursor:pointer;
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -605,7 +677,7 @@ textarea{
   display:flex;
   align-items:center;
   gap:10px;
-  padding:10px 12px;
+  padding:12px 14px;
   border-radius:999px;
   background: rgba(255,255,255,0.06);
   cursor:pointer;
@@ -613,7 +685,7 @@ textarea{
 }
 
 .chip input{
-  transform: scale(1.25);
+  transform: scale(1.35);
   accent-color: #4dd0e1;
 }
 
@@ -820,8 +892,8 @@ input::placeholder, textarea::placeholder{ color: rgba(255,255,255,.45) !importa
     <input type="date" id="data">
     <input type="number" step="any" id="valor" placeholder="Valor">
     <textarea id="obs" placeholder="Observações"></textarea>
-    <button onclick="salvar()">Salvar</button>
-    <button onclick="abrirHistorico()">📜 Histórico</button><br><br>
+    <button class="btn-primary" onclick="salvar()">Salvar</button>
+    <button class="btn-secondary" onclick="abrirHistorico()">📜 Histórico</button><br><br>
     <button class="secundario" onclick="fechar()">Cancelar</button>
   </div>
 </div>
@@ -1002,10 +1074,10 @@ const icones = {
 };
 
 const statusIcone = {
-  ok: "✔️",
-  alerta: "⚠️",
-  critico: "❗",
-  neutro: "➖"
+  ok: "OK",
+  alerta: "ATENÇÃO",
+  critico: "URGENTE",
+  neutro: "—"
 };
 
 
@@ -1151,6 +1223,15 @@ function diasDesde(dataStr){
   return dias+" dias";
 }
 
+function diasNumero(dataStr){
+  if(!dataStr) return null;
+  const hoje = new Date();
+  const data = new Date(dataStr);
+  const diff = hoje - data;
+  const dias = Math.floor(diff / (1000*60*60*24));
+  return Number.isFinite(dias) ? dias : null;
+}
+
 function classeAlerta(diasStr, limite){
   // Sem intervalo definido → sempre neutro
   if (limite === null || isNaN(limite)) return "neutro";
@@ -1178,8 +1259,15 @@ function carregar(){
     const temHistorico = hist.length > 0;
     const ultimaData = obterUltimaData(hist);
     const diasStr = diasDesde(ultimaData);
+    const diasNum = diasNumero(ultimaData);
     const limite = cfg[nome].dias;
     const classe = classeAlerta(diasStr, limite);
+
+    let statusTxt = statusIcone[classe];
+    if (classe === "critico" && typeof limite === "number" && !isNaN(limite) && diasNum !== null) {
+      const atraso = Math.max(1, diasNum - limite);
+      statusTxt = `URGENTE +${atraso}d`;
+    }
 
     const div = document.createElement("div");
     div.className = "card "+classe;
@@ -1205,7 +1293,7 @@ function carregar(){
       <div class="card-ideal">
         ${limite ? `Ideal: ${limite} dias` : "Sem intervalo"}
       </div>
-      <div class="card-status">${statusIcone[classe]}</div>
+      <div class="card-status">${statusTxt}</div>
 
     `;
     div.onclick = ()=>abrir(nome);
@@ -1228,7 +1316,15 @@ function abrir(nome){
   document.getElementById("titulo").innerText = nome;
   const hoje = new Date().toISOString().split("T")[0];
   document.getElementById("data").value = hoje;
-  document.getElementById("valor").value = "";
+  // Prefill: se houver valor ideal configurado, já sugerir esse valor
+  const cfg = carregarConfig();
+  const ideal = cfg?.[nome]?.ideal;
+  // Prefill: ideal; se não houver ideal, usar o último valor registrado (se existir)
+  const hist = JSON.parse(localStorage.getItem(nome)||"[]");
+  const ultimoValor = hist.length ? (hist[0].valor ?? hist[hist.length-1].valor) : "";
+  document.getElementById("valor").value =
+    (ideal !== null && ideal !== undefined && ideal !== "") ? ideal :
+    (ultimoValor !== null && ultimoValor !== undefined && ultimoValor !== "") ? ultimoValor : "";
   document.getElementById("obs").value = "";
   document.getElementById("modal").style.display = "flex";
 }
