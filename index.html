@@ -736,7 +736,7 @@ textarea{
   --card2:#0c1426;
   --stroke: rgba(255,255,255,.08);
   --text: rgba(255,255,255,.92);
-  --muted: rgba(255,255,255,.84);
+  --muted: rgba(255,255,255,.78);
   --accent:#38bdf8;
   --radius:18px;
 }
@@ -792,11 +792,11 @@ button.secundario, .btn.secundario{
 .card.ok, .card.alerta, .card.critico, .card.neutro{ border-left-width: 0 !important; }
 
 /* Tipografia do card */
-.card-title{ font-size: 26px !important; font-weight: 700 !important; letter-spacing: .2px; color: var(--text) !important; }
+.card-title{ font-size: 24px !important; font-weight: 700 !important; letter-spacing: .2px; color: var(--text) !important; }
 .card-icon{ font-size: 28px !important; opacity: .95 !important; }
 .card-days{ font-size: 34px !important; font-weight: 800 !important; }
-.card-days span{ font-size: 22px !important; color: var(--muted) !important; }
-.card-ideal{ font-size: 22px !important; color: var(--muted) !important; }
+.card-days span{ font-size: 20px !important; color: var(--muted) !important; }
+.card-ideal{ font-size: 20px !important; color: var(--muted) !important; }
 
 /* Modal: glass */
 .modal{
@@ -1876,16 +1876,28 @@ function abrirConfig(){
   fecharTodosModais();
   const cfg = carregarConfig();
   const div = document.getElementById("configCampos");
-  div.innerHTML="";
-  itens.forEach(nome=>{
-    div.innerHTML+=`
-      <div class="config-item"><label>${nome} – Intervalo (dias)</label>
-      <input type="number" id="dias_${nome}" value="${cfg[nome].dias}">
-      <label>${nome} – Valor ideal</label>
-      <input type="number" step="any" id="ideal_${nome}" value="${cfg[nome].ideal??""}"></div>
+  div.innerHTML = "";
+
+  // Usa a configuração dinâmica de cards para exibir o NOME amigável (label),
+  // mas mantém a chave interna (key) nos ids dos inputs para não perder histórico.
+  const cardsCfg = loadCardsConfig().slice().sort((a,b)=>(+a.ordem||999)-(+b.ordem||999));
+  cardsCfg.forEach(c => {
+    const key = c.key;
+    const label = (c.label || key);
+    // garantir que existe no objeto cfg
+    if (!cfg[key]) cfg[key] = { dias: null, ideal: null };
+
+    div.innerHTML += `
+      <div class="config-item">
+        <label>${escapeHtml(label)} – Intervalo (dias)</label>
+        <input type="number" id="dias_${escapeHtml(key)}" value="${cfg[key].dias ?? ""}">
+        <label>${escapeHtml(label)} – Valor ideal</label>
+        <input type="number" step="any" id="ideal_${escapeHtml(key)}" value="${cfg[key].ideal ?? ""}">
+      </div>
     `;
   });
-  document.getElementById("configModal").style.display="flex";
+
+  document.getElementById("configModal").style.display = "flex";
 }
 
 function fecharConfig(){
@@ -1908,12 +1920,21 @@ function obterUltimaData(historico) {
 
 function salvarConfig(){
   const cfg = {};
-  itens.forEach(nome=>{
-    cfg[nome]={
-      dias:parseInt(document.getElementById("dias_"+nome).value),
-      ideal:parseFloat(document.getElementById("ideal_"+nome).value)
+  const cardsCfg = loadCardsConfig();
+  cardsCfg.forEach(c => {
+    const key = c.key;
+    const diasEl = document.getElementById("dias_" + key);
+    const idealEl = document.getElementById("ideal_" + key);
+
+    const diasVal = diasEl ? diasEl.value : "";
+    const idealVal = idealEl ? idealEl.value : "";
+
+    cfg[key] = {
+      dias: diasVal === "" ? null : parseInt(diasVal, 10),
+      ideal: idealVal === "" ? null : parseFloat(idealVal)
     };
   });
+
   localStorage.setItem("config", JSON.stringify(cfg));
   fecharConfig();
   carregar();
@@ -2731,12 +2752,3 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
